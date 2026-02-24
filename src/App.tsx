@@ -55,19 +55,33 @@ export default function App() {
   const [template, setTemplate] = useState<EmailTemplate>({ subject: '', body: '' });
   const [logo, setLogo] = useState<string | null>(null);
   const [smtpConfig, setSmtpConfig] = useState<SMTPConfig>(() => {
-    const saved = localStorage.getItem('mailpulse_smtp');
-    return saved ? JSON.parse(saved) : {
-      host: '',
-      port: '587',
-      user: '',
-      pass: '',
-      from: ''
-    };
+    try {
+      const saved = localStorage.getItem('mailpulse_smtp');
+      return saved ? JSON.parse(saved) : {
+        host: '',
+        port: '587',
+        user: '',
+        pass: '',
+        from: ''
+      };
+    } catch (e) {
+      return {
+        host: '',
+        port: '587',
+        user: '',
+        pass: '',
+        from: ''
+      };
+    }
   });
 
   // Save SMTP config to localStorage
   React.useEffect(() => {
-    localStorage.setItem('mailpulse_smtp', JSON.stringify(smtpConfig));
+    try {
+      localStorage.setItem('mailpulse_smtp', JSON.stringify(smtpConfig));
+    } catch (e) {
+      console.warn("No se pudo guardar la configuración en localStorage");
+    }
   }, [smtpConfig]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
