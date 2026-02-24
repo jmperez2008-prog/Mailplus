@@ -54,13 +54,21 @@ export default function App() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [template, setTemplate] = useState<EmailTemplate>({ subject: '', body: '' });
   const [logo, setLogo] = useState<string | null>(null);
-  const [smtpConfig, setSmtpConfig] = useState<SMTPConfig>({
-    host: '',
-    port: '587',
-    user: '',
-    pass: '',
-    from: ''
+  const [smtpConfig, setSmtpConfig] = useState<SMTPConfig>(() => {
+    const saved = localStorage.getItem('mailpulse_smtp');
+    return saved ? JSON.parse(saved) : {
+      host: '',
+      port: '587',
+      user: '',
+      pass: '',
+      from: ''
+    };
   });
+
+  // Save SMTP config to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('mailpulse_smtp', JSON.stringify(smtpConfig));
+  }, [smtpConfig]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendResults, setSendResults] = useState<{ email: string; status: string; error?: string }[]>([]);
@@ -343,7 +351,16 @@ export default function App() {
                     />
                   </div>
 
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-3">
+                    <button 
+                      onClick={() => {
+                        setManualRecipient({ Nombre: '', Email: '', Empresa: '' });
+                        setAiExplanation('');
+                      }}
+                      className="px-6 py-3 text-slate-500 font-medium hover:text-slate-700 transition-all"
+                    >
+                      Limpiar
+                    </button>
                     <button 
                       onClick={handleGenerateIndividualEmail}
                       disabled={isGenerating}
