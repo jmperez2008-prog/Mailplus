@@ -1,0 +1,5 @@
+{
+  "name": "MailPulse Pro",
+  "description": "Lanzador de campañas de email profesional con personalización mediante IA (Gemini) y carga de datos desde Excel.",
+  "requestFramePermissions": []
+}
