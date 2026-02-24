@@ -253,28 +253,108 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight mb-2">Importar Destinatarios</h2>
-                <p className="text-slate-500">Sube tu archivo Excel o CSV para comenzar la campaña.</p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold tracking-tight mb-2">Destinatarios</h2>
+                  <p className="text-slate-500">Elige cómo quieres añadir los contactos para tu campaña.</p>
+                </div>
+                <div className="flex bg-slate-100 p-1 rounded-xl">
+                  <button 
+                    onClick={() => setEntryMode('bulk')}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                      entryMode === 'bulk' ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    )}
+                  >
+                    Carga Masiva
+                  </button>
+                  <button 
+                    onClick={() => setEntryMode('manual')}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                      entryMode === 'manual' ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    )}
+                  >
+                    Individual
+                  </button>
+                </div>
               </div>
 
-              <div 
-                {...getRootProps()} 
-                className={cn(
-                  "border-2 border-dashed rounded-3xl p-20 flex flex-col items-center justify-center transition-all cursor-pointer",
-                  isDragActive ? "border-indigo-500 bg-indigo-50/50" : "border-slate-200 bg-white hover:border-slate-300"
-                )}
-              >
-                <input {...getInputProps()} />
-                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-6">
-                  <Upload size={32} />
+              {entryMode === 'bulk' ? (
+                <div 
+                  {...getRootProps()} 
+                  className={cn(
+                    "border-2 border-dashed rounded-3xl p-20 flex flex-col items-center justify-center transition-all cursor-pointer",
+                    isDragActive ? "border-orange-500 bg-orange-50/50" : "border-slate-200 bg-white hover:border-slate-300"
+                  )}
+                >
+                  <input {...getInputProps()} />
+                  <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-6">
+                    <Upload size={32} />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Arrastra tu archivo aquí</h3>
+                  <p className="text-slate-400 text-sm mb-8">Soporta .xlsx, .xls y .csv</p>
+                  <button className="px-6 py-3 bg-[#FF7900] text-white rounded-xl font-medium shadow-lg shadow-orange-200 hover:bg-orange-600 transition-colors">
+                    Seleccionar Archivo
+                  </button>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Arrastra tu archivo aquí</h3>
-                <p className="text-slate-400 text-sm mb-8">Soporta .xlsx, .xls y .csv</p>
-                <button className="px-6 py-3 bg-[#FF7900] text-white rounded-xl font-medium shadow-lg shadow-orange-200 hover:bg-orange-600 transition-colors">
-                  Seleccionar Archivo
-                </button>
-              </div>
+              ) : (
+                <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nombre Completo</label>
+                      <input 
+                        type="text"
+                        value={manualRecipient.Nombre}
+                        onChange={(e) => setManualRecipient({ ...manualRecipient, Nombre: e.target.value })}
+                        placeholder="Juan Pérez"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Correo Electrónico</label>
+                      <input 
+                        type="email"
+                        value={manualRecipient.Email}
+                        onChange={(e) => setManualRecipient({ ...manualRecipient, Email: e.target.value })}
+                        placeholder="juan@empresa.com"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Empresa</label>
+                      <input 
+                        type="text"
+                        value={manualRecipient.Empresa}
+                        onChange={(e) => setManualRecipient({ ...manualRecipient, Empresa: e.target.value })}
+                        placeholder="Tech Solutions S.L."
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">¿Qué quieres decirle? (Explicación para la IA)</label>
+                    <textarea 
+                      value={aiExplanation}
+                      onChange={(e) => setAiExplanation(e.target.value)}
+                      placeholder="Ej: Quiero ofrecerle un descuento del 20% en fibra óptica porque su contrato actual está por vencer..."
+                      className="w-full h-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition-all font-sans text-sm"
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button 
+                      onClick={handleGenerateIndividualEmail}
+                      disabled={isGenerating}
+                      className="flex items-center gap-2 px-8 py-3 bg-[#FF7900] text-white rounded-xl font-bold shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all"
+                    >
+                      {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
+                      Generar Correo Individual
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {recipients.length > 0 && (
                 <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
