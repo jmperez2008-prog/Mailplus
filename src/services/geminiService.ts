@@ -1,6 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!aiInstance) {
+    // Safe access to process.env which might be replaced by Vite or missing
+    const apiKey = process.env.GEMINI_API_KEY || "";
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export async function generatePersonalizedEmail(
   template: string,
@@ -8,6 +17,7 @@ export async function generatePersonalizedEmail(
   context: string
 ) {
   const model = "gemini-3-flash-preview";
+  const ai = getAI();
   
   const prompt = `
     Actúa como un experto en marketing por correo electrónico para Orange (distribuidor oficial de telefonía).
@@ -53,6 +63,7 @@ export async function generatePersonalizedEmail(
 
 export async function generateDraftTemplate(goal: string) {
   const model = "gemini-3-flash-preview";
+  const ai = getAI();
   
   const prompt = `
     Crea una plantilla de correo electrónico profesional para el siguiente objetivo: "${goal}".

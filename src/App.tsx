@@ -1,9 +1,5 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { 
   Mail, 
   Upload, 
@@ -18,7 +14,9 @@ import {
   ChevronRight,
   Trash2,
   Eye,
-  Layout
+  Layout,
+  LogOut,
+  Shield
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useDropzone } from 'react-dropzone';
@@ -26,6 +24,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { generateDraftTemplate, generatePersonalizedEmail } from './services/geminiService';
+import Login from './components/Login';
+import AdminDashboard from './components/AdminDashboard';
+import { User, AuthResponse, SMTPConfig } from './types/auth';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -38,15 +39,12 @@ interface EmailTemplate {
   body: string;
 }
 
-interface SMTPConfig {
-  host: string;
-  port: string;
-  user: string;
-  pass: string;
-  from: string;
-}
-
 export default function App() {
+  // Auth State
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+
+  // App State
   const [step, setStep] = useState(1);
   const [entryMode, setEntryMode] = useState<'bulk' | 'manual'>('bulk');
   const [manualRecipient, setManualRecipient] = useState<Recipient>({ Nombre: '', Email: '', Empresa: '' });
@@ -54,40 +52,74 @@ export default function App() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [template, setTemplate] = useState<EmailTemplate>({ subject: '', body: '' });
   const [logo, setLogo] = useState<string | null>(null);
-  const [smtpConfig, setSmtpConfig] = useState<SMTPConfig>(() => {
-    try {
-      const saved = localStorage.getItem('mailpulse_smtp');
-      return saved ? JSON.parse(saved) : {
-        host: '',
-        port: '587',
-        user: '',
-        pass: '',
-        from: ''
-      };
-    } catch (e) {
-      return {
-        host: '',
-        port: '587',
-        user: '',
-        pass: '',
-        from: ''
-      };
-    }
+  
+  // Settings State (Loaded from backend)
+  const [smtpConfig, setSmtpConfig] = useState<SMTPConfig>({
+    host: '',
+    port: '587',
+    user: '',
+    pass: '',
+    from: ''
   });
+  const [signature, setSignature] = useState('');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
-  // Save SMTP config to localStorage
-  React.useEffect(() => {
-    try {
-      localStorage.setItem('mailpulse_smtp', JSON.stringify(smtpConfig));
-    } catch (e) {
-      console.warn("No se pudo guardar la configuración en localStorage");
-    }
-  }, [smtpConfig]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendResults, setSendResults] = useState<{ email: string; status: string; error?: string }[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [personalizedPreviews, setPersonalizedPreviews] = useState<Record<number, EmailTemplate>>({});
+
+  // Load user settings when logged in
+  useEffect(() => {
+    if (user && user.smtpConfig) {
+      setSmtpConfig(user.smtpConfig);
+    }
+    if (user && user.signature) {
+      setSignature(user.signature);
+    }
+  }, [user]);
+
+  const handleLogin = (data: AuthResponse) => {
+    setUser(data.user);
+    setToken(data.token);
+    setStep(1);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setToken(null);
+    setRecipients([]);
+    setTemplate({ subject: '', body: '' });
+  };
+
+  const handleSaveSettings = async () => {
+    if (!user || !token) return;
+    setIsSavingSettings(true);
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ smtpConfig, signature })
+      });
+      
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUser(updatedUser);
+        alert('Configuración guardada correctamente');
+      } else {
+        alert('Error al guardar la configuración');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de conexión');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   // File Upload Handling
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -185,14 +217,16 @@ export default function App() {
     try {
       const response = await fetch('/api/send-emails', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({
           recipients,
           template: {
             ...template,
             body: logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>${template.body}` : template.body
-          },
-          smtpConfig
+          }
         })
       });
       const data = await response.json();
@@ -208,19 +242,28 @@ export default function App() {
 
   const currentPreview = useMemo(() => {
     const base = personalizedPreviews[activePreviewIndex] || template;
+    let body = base.body;
+    
     if (logo) {
-      return {
-        ...base,
-        body: `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>${base.body}`
-      };
+      body = `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>${body}`;
     }
-    return base;
-  }, [activePreviewIndex, personalizedPreviews, template, logo]);
+    
+    // Preview signature
+    if (signature) {
+      body += `<br><br><div class="signature">${signature}</div>`;
+    }
+
+    return { ...base, body };
+  }, [activePreviewIndex, personalizedPreviews, template, logo, signature]);
+
+  if (!user) {
+    return <Login onLogin={handleLogin} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
       {/* Sidebar Navigation */}
-      <nav className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6 z-10">
+      <nav className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6 z-10 flex flex-col">
         <div className="flex items-center gap-3 mb-10 px-2">
           <div className="w-10 h-10 bg-[#FF7900] rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-200">
             <Mail size={24} />
@@ -228,7 +271,7 @@ export default function App() {
           <h1 className="font-bold text-xl tracking-tight">MailPulse <span className="text-[#FF7900]">Orange</span></h1>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1">
           {[
             { id: 1, label: 'Destinatarios', icon: Users },
             { id: 2, label: 'Diseñar Plantilla', icon: Layout },
@@ -250,18 +293,40 @@ export default function App() {
               {item.label}
             </button>
           ))}
+
+          {user.role === 'admin' && (
+            <button
+              onClick={() => setStep(6)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium",
+                step === 6
+                  ? "bg-indigo-50 text-indigo-700 shadow-sm" 
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+              )}
+            >
+              <Shield size={18} />
+              Administración
+            </button>
+          )}
         </div>
 
-        <div className="absolute bottom-8 left-6 right-6">
-          <div className="p-4 bg-slate-900 rounded-2xl text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles size={16} className="text-indigo-400" />
-              <span className="text-xs font-semibold uppercase tracking-wider">IA Activa</span>
+        <div className="mt-auto pt-6 border-t border-slate-100">
+          <div className="flex items-center gap-3 px-2 mb-4">
+            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">
+              {user.username.charAt(0).toUpperCase()}
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Gemini está listo para personalizar cada mensaje de tu campaña.
-            </p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-900 truncate">{user.username}</p>
+              <p className="text-xs text-slate-500 truncate capitalize">{user.role}</p>
+            </div>
           </div>
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all text-sm font-medium"
+          >
+            <LogOut size={16} />
+            Cerrar Sesión
+          </button>
         </div>
       </nav>
 
@@ -596,12 +661,13 @@ export default function App() {
               className="space-y-8"
             >
               <div>
-                <h2 className="text-3xl font-bold tracking-tight mb-2">Configuración SMTP</h2>
-                <p className="text-slate-500">Configura tu servidor de correo para realizar los envíos.</p>
+                <h2 className="text-3xl font-bold tracking-tight mb-2">Configuración de Usuario</h2>
+                <p className="text-slate-500">Configura tu servidor de correo y firma personal.</p>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm grid grid-cols-2 gap-8">
                 <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Servidor SMTP</h3>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Host SMTP</label>
                     <input 
@@ -634,6 +700,7 @@ export default function App() {
                   </div>
                 </div>
                 <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Credenciales</h3>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Usuario / Email</label>
                     <input 
@@ -657,10 +724,34 @@ export default function App() {
                   <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
                     <AlertCircle className="text-amber-500 shrink-0" size={20} />
                     <p className="text-xs text-amber-700 leading-relaxed">
-                      Si usas Gmail, recuerda usar una "Contraseña de Aplicación" y no tu contraseña normal. 
-                      Asegúrate de que el puerto 587 esté abierto.
+                      Si usas Gmail, recuerda usar una "Contraseña de Aplicación".
                     </p>
                   </div>
+                </div>
+
+                <div className="col-span-2 space-y-6 border-t pt-6">
+                  <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Firma de Correo (HTML)</h3>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Tu Firma Personal</label>
+                    <textarea 
+                      value={signature}
+                      onChange={(e) => setSignature(e.target.value)}
+                      placeholder="<p>Saludos,<br><strong>Tu Nombre</strong></p>"
+                      className="w-full h-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 font-mono text-sm"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-2">Se añadirá automáticamente al final de todos tus correos.</p>
+                  </div>
+                </div>
+
+                <div className="col-span-2 flex justify-end">
+                  <button 
+                    onClick={handleSaveSettings}
+                    disabled={isSavingSettings}
+                    className="px-8 py-3 bg-[#FF7900] text-white rounded-xl font-bold shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all flex items-center gap-2"
+                  >
+                    {isSavingSettings ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                    Guardar Configuración
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -733,6 +824,16 @@ export default function App() {
               >
                 Nueva Campaña
               </button>
+            </motion.div>
+          )}
+
+          {step === 6 && user.role === 'admin' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <AdminDashboard token={token!} />
             </motion.div>
           )}
         </AnimatePresence>
