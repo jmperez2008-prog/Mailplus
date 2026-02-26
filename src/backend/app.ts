@@ -54,33 +54,50 @@ const findUserById = async (id: string) => {
 
 // Initialize default admin
 const initializeDefaultAdmin = async () => {
-  const hashedPassword = await bcrypt.hash("Alacena66@2026", 10);
-  const adminUser = {
-    username: "Juanma",
-    password: hashedPassword,
-    role: "admin",
-    smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
-    signature: "<p>Saludos,<br><strong>Juanma</strong><br>Administrador</p>"
-  };
+  try {
+    const hashedPassword = await bcrypt.hash("Alacena66@2026", 10);
+    const adminUser = {
+      username: "Juanma",
+      password: hashedPassword,
+      role: "admin",
+      smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
+      signature: "<p>Saludos,<br><strong>Juanma</strong><br>Administrador</p>"
+    };
 
-  if (supabase) {
-    // Check if admin exists
-    const { data } = await supabase.from('app_users').select('*').eq('username', 'Juanma').single();
-    if (!data) {
-      await supabase.from('app_users').insert([adminUser]);
-      console.log("Default admin initialized in Supabase");
+    if (supabase) {
+      // Check if admin exists
+      const { data, error } = await supabase.from('app_users').select('*').eq('username', 'Juanma').single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "Row not found"
+        console.error("Error checking admin user in Supabase:", error);
+      }
+
+      if (!data) {
+        const { error: insertError } = await supabase.from('app_users').insert([adminUser]);
+        if (insertError) {
+          console.error("Error creating default admin in Supabase:", insertError);
+        } else {
+          console.log("Default admin initialized in Supabase");
+        }
+      }
+    } else {
+      // Check if admin exists in local
+      if (!localUsers.find(u => u.username === "Juanma")) {
+          localUsers.push({ ...adminUser, id: "1", smtpConfig: adminUser.smtp_config });
+          console.log("Default admin initialized in memory");
+      }
     }
-  } else {
-    // Check if admin exists in local
-    if (!localUsers.find(u => u.username === "Juanma")) {
-        localUsers.push({ ...adminUser, id: "1", smtpConfig: adminUser.smtp_config });
-        console.log("Default admin initialized in memory");
-    }
+  } catch (error) {
+    console.error("Critical error initializing default admin:", error);
   }
 };
 
 export async function createApp() {
-  await initializeDefaultAdmin();
+  try {
+    await initializeDefaultAdmin();
+  } catch (error) {
+    console.error("Failed to initialize admin:", error);
+  }
 
   const app = express();
   app.use(express.json({ limit: '50mb' }));
@@ -102,25 +119,37 @@ export async function createApp() {
   // --- Auth Routes ---
 
   app.post("/api/login", async (req, res) => {
-    const { username, password } = req.body;
-    const user = await findUserByUsername(username);
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Usuario y contraseña requeridos" });
+      }
 
-    if (!user) {
-      return res.status(400).json({ error: "Usuario no encontrado" });
-    }
+      const user = await findUserByUsername(username);
 
-    if (await bcrypt.compare(password, user.password)) {
-      const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET);
-      // Return user without password
-      const { password, ...userWithoutPassword } = user;
-      // Normalize keys for frontend (snake_case DB -> camelCase frontend if needed)
-      const mappedUser = {
-        ...userWithoutPassword,
-        smtpConfig: user.smtp_config || user.smtpConfig
-      };
-      res.json({ token, user: mappedUser });
-    } else {
-      res.status(403).json({ error: "Contraseña incorrecta" });
+      if (!user) {
+        return res.status(400).json({ error: "Usuario no encontrado" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (isPasswordValid) {
+        const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET);
+        // Return user without password
+        const { password, ...userWithoutPassword } = user;
+        // Normalize keys for frontend (snake_case DB -> camelCase frontend if needed)
+        const mappedUser = {
+          ...userWithoutPassword,
+          smtpConfig: user.smtp_config || user.smtpConfig
+        };
+        res.json({ token, user: mappedUser });
+      } else {
+        res.status(403).json({ error: "Contraseña incorrecta" });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
     }
   });
 
