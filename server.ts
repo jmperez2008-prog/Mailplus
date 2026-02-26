@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import { createApp } from "./src/backend/app";
+import { createApp } from "./src/backend/app.js";
 
 dotenv.config();
 

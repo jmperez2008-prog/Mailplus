@@ -1,4 +1,4 @@
-import { createApp } from "../src/backend/app";
+import { createApp } from "../src/backend/app.js";
 
 let appPromise: Promise<any> | null = null;
 
