@@ -78,6 +78,9 @@ export default function App() {
     if (user && user.signature) {
       setSignature(user.signature);
     }
+    if (user && user.logo) {
+      setLogo(user.logo);
+    }
   }, [user]);
 
   const handleLogin = (data: AuthResponse) => {
@@ -91,6 +94,7 @@ export default function App() {
     setToken(null);
     setRecipients([]);
     setTemplate({ subject: '', body: '' });
+    setLogo(null);
   };
 
   const handleSaveSettings = async () => {
@@ -103,7 +107,7 @@ export default function App() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ smtpConfig, signature })
+        body: JSON.stringify({ smtpConfig, signature, logo })
       });
       
       if (res.ok) {

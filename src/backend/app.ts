@@ -103,6 +103,16 @@ export async function createApp() {
   const app = express();
   app.use(express.json({ limit: '50mb' }));
 
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      supabaseConnected: !!supabase,
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+    });
+  });
+
   // Authentication Middleware
   const authenticateToken = (req: any, res: any, next: any) => {
     const authHeader = req.headers['authorization'];
@@ -182,7 +192,8 @@ export async function createApp() {
       password: hashedPassword,
       role: role || 'user',
       smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
-      signature: ""
+      signature: "",
+      logo: ""
     };
 
     if (supabase) {
@@ -209,11 +220,12 @@ export async function createApp() {
     const user = await findUserById(userId);
     if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
-    const { smtpConfig, signature, password } = req.body;
+    const { smtpConfig, signature, password, logo } = req.body;
     
     const updates: any = {};
     if (smtpConfig) updates.smtp_config = smtpConfig;
     if (signature !== undefined) updates.signature = signature;
+    if (logo !== undefined) updates.logo = logo;
     if (password) {
       updates.password = await bcrypt.hash(password, 10);
     }
@@ -228,6 +240,7 @@ export async function createApp() {
       const userIndex = localUsers.findIndex(u => u.id === userId);
       if (smtpConfig) localUsers[userIndex].smtpConfig = smtpConfig;
       if (signature !== undefined) localUsers[userIndex].signature = signature;
+      if (logo !== undefined) localUsers[userIndex].logo = logo;
       if (password) localUsers[userIndex].password = updates.password;
       
       const { password: _, ...safeUser } = localUsers[userIndex];
