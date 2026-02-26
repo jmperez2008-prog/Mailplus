@@ -61,7 +61,8 @@ const initializeDefaultAdmin = async () => {
       password: hashedPassword,
       role: "admin",
       smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
-      signature: "<p>Saludos,<br><strong>Juanma</strong><br>Administrador</p>"
+      signature: "<p>Saludos,<br><strong>Juanma</strong><br>Administrador</p>",
+      logo: ""
     };
 
     if (supabase) {
