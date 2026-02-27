@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Trash2,
   Eye,
+  EyeOff,
   Layout,
   LogOut,
   Shield
@@ -65,6 +66,7 @@ export default function App() {
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isTestingSmtp, setIsTestingSmtp] = useState(false);
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -765,13 +767,22 @@ export default function App() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Contraseña / App Password</label>
-                    <input 
-                      type="password"
-                      value={smtpConfig.pass}
-                      onChange={(e) => setSmtpConfig({ ...smtpConfig, pass: e.target.value })}
-                      placeholder="••••••••••••"
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                    <div className="relative">
+                      <input 
+                        type={showSmtpPass ? "text" : "password"}
+                        value={smtpConfig.pass}
+                        onChange={(e) => setSmtpConfig({ ...smtpConfig, pass: e.target.value })}
+                        placeholder="••••••••••••"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 pr-12"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSmtpPass(!showSmtpPass)}
+                        className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {showSmtpPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
                   <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
                     <AlertCircle className="text-amber-500 shrink-0" size={20} />
