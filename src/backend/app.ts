@@ -62,7 +62,7 @@ const initializeDefaultAdmin = async () => {
       role: "admin",
       smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
       signature: "<p>Saludos,<br><strong>Juanma</strong><br>Administrador</p>",
-      signatureImage: "",
+      signature_image: "",
       logo: ""
     };
 
@@ -153,7 +153,8 @@ export async function createApp() {
         // Normalize keys for frontend (snake_case DB -> camelCase frontend if needed)
         const mappedUser = {
           ...userWithoutPassword,
-          smtpConfig: user.smtp_config || user.smtpConfig
+          smtpConfig: user.smtp_config || user.smtpConfig,
+          signatureImage: user.signature_image || user.signatureImage
         };
         res.json({ token, user: mappedUser });
       } else {
@@ -173,7 +174,8 @@ export async function createApp() {
     const users = await getUsers();
     const safeUsers = users.map(({ password, ...u }) => ({
       ...u,
-      smtpConfig: u.smtp_config || u.smtpConfig
+      smtpConfig: u.smtp_config || u.smtpConfig,
+      signatureImage: u.signature_image || u.signatureImage
     }));
     res.json(safeUsers);
   });
