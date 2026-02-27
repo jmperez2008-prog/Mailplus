@@ -288,6 +288,7 @@ export async function createApp() {
     // Handle both DB casing (snake) and local casing (camel)
     const smtpConfig = user.smtp_config || user.smtpConfig;
     const signature = user.signature;
+    const signatureImage = user.signature_image || user.signatureImage;
 
     if (!recipients || !template) {
       return res.status(400).json({ error: "Faltan destinatarios o plantilla" });
@@ -324,8 +325,15 @@ export async function createApp() {
         });
 
         // Append signature if exists
-        if (signature) {
-          personalizedBody += `<br><br><div class="signature">${signature}</div>`;
+        if (signature || signatureImage) {
+          personalizedBody += `<br><br><div class="signature">`;
+          if (signature) {
+            personalizedBody += signature;
+          }
+          if (signatureImage) {
+            personalizedBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 300px; margin-top: 10px;">`;
+          }
+          personalizedBody += `</div>`;
         }
 
         await transporter.sendMail({

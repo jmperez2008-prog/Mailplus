@@ -754,16 +754,39 @@ export default function App() {
                 </div>
 
                 <div className="col-span-2 space-y-6 border-t pt-6">
-                  <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Firma de Correo (HTML)</h3>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Tu Firma Personal</label>
-                    <textarea 
-                      value={signature}
-                      onChange={(e) => setSignature(e.target.value)}
-                      placeholder="<p>Saludos,<br><strong>Tu Nombre</strong></p>"
-                      className="w-full h-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 font-mono text-sm"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-2">Se añadirá automáticamente al final de todos tus correos.</p>
+                  <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Firma de Correo</h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Firma en Texto (HTML)</label>
+                      <textarea 
+                        value={signature}
+                        onChange={(e) => setSignature(e.target.value)}
+                        placeholder="<p>Saludos,<br><strong>Tu Nombre</strong></p>"
+                        className="w-full h-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 font-mono text-sm"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-2">Se añadirá automáticamente al final de tus correos.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Firma en Imagen</label>
+                      {signatureImage ? (
+                        <div className="relative group w-full aspect-video bg-slate-50 rounded-xl overflow-hidden border border-slate-100 flex items-center justify-center">
+                          <img src={signatureImage} alt="Signature preview" className="max-h-full object-contain p-2" />
+                          <button 
+                            onClick={() => setSignatureImage(null)}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="w-full aspect-video border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-orange-300 cursor-pointer transition-all">
+                          <Upload size={24} className="mb-2" />
+                          <span className="text-xs font-medium">Subir Imagen</span>
+                          <input type="file" className="hidden" accept="image/*" onChange={handleSignatureImageUpload} />
+                        </label>
+                      )}
+                       <p className="text-[10px] text-slate-400 mt-2">Se añadirá después del texto de tu firma.</p>
+                    </div>
                   </div>
                 </div>
 
