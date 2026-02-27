@@ -48,10 +48,12 @@ export default function App() {
   // App State
   const [step, setStep] = useState(1);
   const [entryMode, setEntryMode] = useState<'bulk' | 'manual'>('bulk');
-  const [manualRecipient, setManualRecipient] = useState<Recipient>({ Nombre: '', Email: '', Empresa: '' });
+  const [manualRecipients, setManualRecipients] = useState<Recipient[]>([{ Nombre: '', Email: '', Empresa: '' }]);
   const [aiExplanation, setAiExplanation] = useState('');
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [template, setTemplate] = useState<EmailTemplate>({ subject: '', body: '' });
+  const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   
   // Settings State (Loaded from backend)
@@ -88,7 +90,70 @@ export default function App() {
     if (user && user.logo) {
       setLogo(user.logo);
     }
-  }, [user]);
+    if (token) {
+      fetchSavedTemplates();
+    }
+  }, [user, token]);
+
+  const fetchSavedTemplates = async () => {
+    try {
+      const res = await fetch('/api/templates', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSavedTemplates(data);
+      }
+    } catch (e) {
+      console.error("Error fetching templates", e);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    const name = prompt("Nombre para esta plantilla:");
+    if (!name) return;
+
+    setIsSavingTemplate(true);
+    try {
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, subject: template.subject, body: template.body })
+      });
+      if (res.ok) {
+        alert("Plantilla guardada");
+        fetchSavedTemplates();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  const handleLoadTemplate = (t: any) => {
+    setTemplate({ subject: t.subject, body: t.body });
+    alert(`Plantilla "${t.name}" cargada`);
+  };
+
+  const handleDeleteTemplate = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("¿Eliminar esta plantilla?")) return;
+    try {
+      const res = await fetch(`/api/templates/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchSavedTemplates();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleLogin = (data: AuthResponse) => {
     setUser(data.user);
@@ -199,24 +264,41 @@ export default function App() {
   };
 
   const handleGenerateIndividualEmail = async () => {
-    if (!manualRecipient.Email || !aiExplanation) {
-      alert("Por favor, introduce al menos el email y una explicación para la IA.");
+    const validRecipients = manualRecipients.filter(r => r.Email);
+    if (validRecipients.length === 0 || !aiExplanation) {
+      alert("Por favor, introduce al menos un email y una explicación para la IA.");
       return;
     }
 
     setIsGenerating(true);
+    // Use the first recipient to generate the base template
     const result = await generatePersonalizedEmail(
       `Genera un correo profesional de Orange basado en esta petición: ${aiExplanation}`,
-      manualRecipient,
-      "Contacto individual personalizado"
+      validRecipients[0],
+      "Contacto personalizado"
     );
     
     if (result) {
       setTemplate(result);
-      setRecipients([manualRecipient]);
-      setStep(3); // Go straight to preview
+      setRecipients(validRecipients);
+      setStep(3);
     }
     setIsGenerating(false);
+  };
+
+  const addManualRecipient = () => {
+    setManualRecipients([...manualRecipients, { Nombre: '', Email: '', Empresa: '' }]);
+  };
+
+  const removeManualRecipient = (index: number) => {
+    if (manualRecipients.length === 1) return;
+    setManualRecipients(manualRecipients.filter((_, i) => i !== index));
+  };
+
+  const updateManualRecipient = (index: number, field: string, value: string) => {
+    const updated = [...manualRecipients];
+    updated[index] = { ...updated[index], [field]: value };
+    setManualRecipients(updated);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -303,7 +385,7 @@ export default function App() {
     if (signature || signatureImage) {
       body += `<br><br><div class="signature">`;
       if (signature) body += `${signature}`;
-      if (signatureImage) body += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 300px; margin-top: 10px;">`;
+      if (signatureImage) body += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; margin-top: 10px;">`;
       body += `</div>`;
     }
 
@@ -441,45 +523,70 @@ export default function App() {
                 </div>
               ) : (
                 <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nombre Completo</label>
-                      <input 
-                        type="text"
-                        value={manualRecipient.Nombre}
-                        onChange={(e) => setManualRecipient({ ...manualRecipient, Nombre: e.target.value })}
-                        placeholder="Juan Pérez"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Correo Electrónico</label>
-                      <input 
-                        type="email"
-                        value={manualRecipient.Email}
-                        onChange={(e) => setManualRecipient({ ...manualRecipient, Email: e.target.value })}
-                        placeholder="juan@empresa.com"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Empresa</label>
-                      <input 
-                        type="text"
-                        value={manualRecipient.Empresa}
-                        onChange={(e) => setManualRecipient({ ...manualRecipient, Empresa: e.target.value })}
-                        placeholder="Tech Solutions S.L."
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-bold text-slate-800">Destinatarios Manuales</h3>
+                    <button 
+                      onClick={addManualRecipient}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all text-sm"
+                    >
+                      <Users size={16} />
+                      Añadir Otro (+)
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                    {manualRecipients.map((rec, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-2xl relative group">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre</label>
+                          <input 
+                            type="text"
+                            placeholder="Nombre"
+                            value={rec.Nombre}
+                            onChange={(e) => updateManualRecipient(index, 'Nombre', e.target.value)}
+                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Email</label>
+                          <input 
+                            type="email"
+                            placeholder="Email"
+                            value={rec.Email}
+                            onChange={(e) => updateManualRecipient(index, 'Email', e.target.value)}
+                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          />
+                        </div>
+                        <div className="relative">
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Empresa</label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="text"
+                              placeholder="Empresa"
+                              value={rec.Empresa}
+                              onChange={(e) => updateManualRecipient(index, 'Empresa', e.target.value)}
+                              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                            />
+                            {manualRecipients.length > 1 && (
+                              <button 
+                                onClick={() => removeManualRecipient(index)}
+                                className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                   
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">¿Qué quieres decirle? (Explicación para la IA)</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">¿Qué quieres decirles? (Explicación para la IA)</label>
                     <textarea 
                       value={aiExplanation}
                       onChange={(e) => setAiExplanation(e.target.value)}
-                      placeholder="Ej: Quiero ofrecerle un descuento del 20% en fibra óptica porque su contrato actual está por vencer..."
+                      placeholder="Ej: Quiero ofrecerles un descuento del 20% en fibra óptica porque su contrato actual está por vencer..."
                       className="w-full h-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition-all font-sans text-sm"
                     />
                   </div>
@@ -487,7 +594,7 @@ export default function App() {
                   <div className="flex justify-end gap-3">
                     <button 
                       onClick={() => {
-                        setManualRecipient({ Nombre: '', Email: '', Empresa: '' });
+                        setManualRecipients([{ Nombre: '', Email: '', Empresa: '' }]);
                         setAiExplanation('');
                       }}
                       className="px-6 py-3 text-slate-500 font-medium hover:text-slate-700 transition-all"
@@ -500,7 +607,7 @@ export default function App() {
                       className="flex items-center gap-2 px-8 py-3 bg-[#FF7900] text-white rounded-xl font-bold shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all"
                     >
                       {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
-                      Generar Correo Individual
+                      Generar Correos Personalizados
                     </button>
                   </div>
                 </div>
@@ -551,14 +658,51 @@ export default function App() {
                   <h2 className="text-3xl font-bold tracking-tight mb-2">Diseñar Plantilla</h2>
                   <p className="text-slate-500">Crea el contenido de tu correo. Usa {"{{variable}}"} para personalizar.</p>
                 </div>
-                <button 
-                  onClick={handleGenerateTemplate}
-                  disabled={isGenerating}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#FF7900] text-white rounded-xl font-medium shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all"
-                >
-                  {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-                  Generar con Estilo Orange
-                </button>
+                <div className="flex gap-3">
+                  {savedTemplates.length > 0 && (
+                    <div className="relative group">
+                      <button className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-all">
+                        <Layout size={18} />
+                        Cargar Plantilla
+                      </button>
+                      <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
+                        <div className="p-2 max-h-64 overflow-y-auto">
+                          {savedTemplates.map(t => (
+                            <div 
+                              key={t.id} 
+                              onClick={() => handleLoadTemplate(t)}
+                              className="p-3 hover:bg-orange-50 rounded-xl cursor-pointer flex justify-between items-center group/item"
+                            >
+                              <span className="text-sm font-medium truncate pr-2">{t.name}</span>
+                              <button 
+                                onClick={(e) => handleDeleteTemplate(t.id, e)}
+                                className="text-slate-300 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <button 
+                    onClick={handleSaveTemplate}
+                    disabled={!template.subject || isSavingTemplate}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-medium hover:bg-emerald-100 disabled:opacity-50 transition-all"
+                  >
+                    {isSavingTemplate ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
+                    Guardar Plantilla
+                  </button>
+                  <button 
+                    onClick={handleGenerateTemplate}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#FF7900] text-white rounded-xl font-medium shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all"
+                  >
+                    {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                    Generar con Estilo Orange
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

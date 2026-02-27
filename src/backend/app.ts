@@ -276,6 +276,59 @@ export async function createApp() {
     res.json({ message: "Usuario eliminado" });
   });
 
+  // --- Template Routes ---
+
+  // Get all templates for user
+  app.get("/api/templates", authenticateToken, async (req: any, res) => {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) return res.status(500).json({ error: error.message });
+      res.json(data || []);
+    } else {
+      res.json([]); // Fallback for local mode
+    }
+  });
+
+  // Save new template
+  app.post("/api/templates", authenticateToken, async (req: any, res) => {
+    const { name, subject, body } = req.body;
+    if (!name) return res.status(400).json({ error: "El nombre es obligatorio" });
+
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('email_templates')
+        .insert([{ user_id: req.user.id, name, subject, body }])
+        .select()
+        .single();
+      
+      if (error) return res.status(500).json({ error: error.message });
+      res.json(data);
+    } else {
+      res.status(501).json({ error: "No disponible en modo local" });
+    }
+  });
+
+  // Delete template
+  app.delete("/api/templates/:id", authenticateToken, async (req: any, res) => {
+    if (supabase) {
+      const { error } = await supabase
+        .from('email_templates')
+        .delete()
+        .eq('id', req.params.id)
+        .eq('user_id', req.user.id);
+      
+      if (error) return res.status(500).json({ error: error.message });
+      res.json({ message: "Plantilla eliminada" });
+    } else {
+      res.sendStatus(501);
+    }
+  });
+
   // --- Email Routes ---
 
   // Test SMTP connection
@@ -362,7 +415,7 @@ export async function createApp() {
           }
           if (signatureImage) {
             // Ensure image is not too large for some clients, but base64 is generally fine
-            personalizedBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 300px; height: auto; margin-top: 10px;">`;
+            personalizedBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px;">`;
           }
           personalizedBody += `</div>`;
         }
