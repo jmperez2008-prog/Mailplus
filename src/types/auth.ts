@@ -6,6 +6,7 @@ export interface User {
   role: 'admin' | 'user';
   smtpConfig?: SMTPConfig;
   signature?: string;
+  signatureImage?: string;
   logo?: string;
 }
 

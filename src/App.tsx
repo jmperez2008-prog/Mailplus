@@ -62,6 +62,7 @@ export default function App() {
     from: ''
   });
   const [signature, setSignature] = useState('');
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -77,6 +78,9 @@ export default function App() {
     }
     if (user && user.signature) {
       setSignature(user.signature);
+    }
+    if (user && user.signatureImage) {
+      setSignatureImage(user.signatureImage);
     }
     if (user && user.logo) {
       setLogo(user.logo);
@@ -95,6 +99,7 @@ export default function App() {
     setRecipients([]);
     setTemplate({ subject: '', body: '' });
     setLogo(null);
+    setSignatureImage(null);
   };
 
   const handleSaveSettings = async () => {
@@ -107,7 +112,7 @@ export default function App() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ smtpConfig, signature, logo })
+        body: JSON.stringify({ smtpConfig, signature, signatureImage, logo })
       });
       
       if (res.ok) {
@@ -230,7 +235,8 @@ export default function App() {
           template: {
             ...template,
             body: logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>${template.body}` : template.body
-          }
+          },
+          signatureImage: signatureImage
         })
       });
       const data = await response.json();
@@ -244,6 +250,17 @@ export default function App() {
     }
   };
 
+  const handleSignatureImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setSignatureImage(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const currentPreview = useMemo(() => {
     const base = personalizedPreviews[activePreviewIndex] || template;
     let body = base.body;
@@ -253,12 +270,15 @@ export default function App() {
     }
     
     // Preview signature
-    if (signature) {
-      body += `<br><br><div class="signature">${signature}</div>`;
+    if (signature || signatureImage) {
+      body += `<br><br><div class="signature">`;
+      if (signature) body += `${signature}`;
+      if (signatureImage) body += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 300px; margin-top: 10px;">`;
+      body += `</div>`;
     }
 
     return { ...base, body };
-  }, [activePreviewIndex, personalizedPreviews, template, logo, signature]);
+  }, [activePreviewIndex, personalizedPreviews, template, logo, signature, signatureImage]);
 
   if (!user) {
     return <Login onLogin={handleLogin} />;

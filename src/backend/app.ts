@@ -62,6 +62,7 @@ const initializeDefaultAdmin = async () => {
       role: "admin",
       smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
       signature: "<p>Saludos,<br><strong>Juanma</strong><br>Administrador</p>",
+      signatureImage: "",
       logo: ""
     };
 
@@ -193,6 +194,7 @@ export async function createApp() {
       role: role || 'user',
       smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
       signature: "",
+      signature_image: "",
       logo: ""
     };
 
@@ -220,11 +222,12 @@ export async function createApp() {
     const user = await findUserById(userId);
     if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
-    const { smtpConfig, signature, password, logo } = req.body;
+    const { smtpConfig, signature, signatureImage, password, logo } = req.body;
     
     const updates: any = {};
     if (smtpConfig) updates.smtp_config = smtpConfig;
     if (signature !== undefined) updates.signature = signature;
+    if (signatureImage !== undefined) updates.signature_image = signatureImage;
     if (logo !== undefined) updates.logo = logo;
     if (password) {
       updates.password = await bcrypt.hash(password, 10);
@@ -240,6 +243,7 @@ export async function createApp() {
       const userIndex = localUsers.findIndex(u => u.id === userId);
       if (smtpConfig) localUsers[userIndex].smtpConfig = smtpConfig;
       if (signature !== undefined) localUsers[userIndex].signature = signature;
+      if (req.body.signatureImage !== undefined) localUsers[userIndex].signatureImage = req.body.signatureImage;
       if (logo !== undefined) localUsers[userIndex].logo = logo;
       if (password) localUsers[userIndex].password = updates.password;
       
