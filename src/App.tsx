@@ -477,27 +477,47 @@ export default function App() {
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-3xl font-bold tracking-tight mb-2">Destinatarios</h2>
-                  <p className="text-slate-500">Elige cómo quieres añadir los contactos para tu campaña.</p>
+                  <p className="text-slate-500">Carga tus contactos y luego elige una plantilla para empezar.</p>
                 </div>
-                <div className="flex bg-slate-100 p-1 rounded-xl">
-                  <button 
-                    onClick={() => setEntryMode('bulk')}
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
-                      entryMode === 'bulk' ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    )}
-                  >
-                    Carga Masiva
-                  </button>
-                  <button 
-                    onClick={() => setEntryMode('manual')}
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
-                      entryMode === 'manual' ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    )}
-                  >
-                    Individual
-                  </button>
+                <div className="flex items-center gap-4">
+                  {savedTemplates.length > 0 && (
+                    <select 
+                      onChange={(e) => {
+                        const selectedTemplate = savedTemplates.find(t => t.id === e.target.value);
+                        if (selectedTemplate) {
+                          handleLoadTemplate(selectedTemplate);
+                          setStep(2); // Move to design step after loading
+                        }
+                      }}
+                      className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500 transition-all appearance-none"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>O Cargar plantilla guardada...</option>
+                      {savedTemplates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  )}
+                  <div className="flex bg-slate-100 p-1 rounded-xl">
+                    <button 
+                      onClick={() => setEntryMode('bulk')}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                        entryMode === 'bulk' ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      )}
+                    >
+                      Carga Masiva
+                    </button>
+                    <button 
+                      onClick={() => setEntryMode('manual')}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                        entryMode === 'manual' ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      )}
+                    >
+                      Individual
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -523,13 +543,30 @@ export default function App() {
                 <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-bold text-slate-800">Destinatarios Manuales</h3>
-                    <button 
-                      onClick={addManualRecipient}
-                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all text-sm"
-                    >
-                      <Users size={16} />
-                      Añadir Otro (+)
-                    </button>
+                    <div className="flex items-center gap-4">
+                      {savedTemplates.length > 0 && (
+                        <select 
+                          onChange={(e) => {
+                            const selectedTemplate = savedTemplates.find(t => t.id === e.target.value);
+                            if (selectedTemplate) handleLoadTemplate(selectedTemplate);
+                          }}
+                          className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500 transition-all appearance-none"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Cargar plantilla...</option>
+                          {savedTemplates.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      )}
+                      <button 
+                        onClick={addManualRecipient}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all text-sm"
+                      >
+                        <Users size={16} />
+                        Añadir Otro (+)
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
