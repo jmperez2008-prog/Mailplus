@@ -344,11 +344,9 @@ export default function App() {
         },
         body: JSON.stringify({
           recipients,
-          template: {
-            ...template,
-            body: logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>${template.body}` : template.body
-          },
-          signatureImage: signatureImage
+          template,
+          signatureImage: signatureImage,
+          logo: logo
         })
       });
       const data = await response.json();

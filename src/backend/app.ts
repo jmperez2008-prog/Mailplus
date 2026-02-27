@@ -377,17 +377,16 @@ export async function createApp() {
 
   // Email sending endpoint
   app.post("/api/send-emails", authenticateToken, async (req: any, res) => {
-    // Get user from DB to ensure we have latest SMTP config
+    const { recipients, template, signatureImage, logo } = req.body;
     const user = await findUserById(req.user.id);
     if (!user) return res.sendStatus(403);
 
-    const { recipients, template } = req.body;
-    // Handle both DB casing (snake) and local casing (camel)
-    const smtpConfig = user.smtp_config || user.smtpConfig;
-    const signature = user.signature;
-    const signatureImage = user.signature_image || user.signatureImage;
-
-    if (!recipients || !template) {
+    const smtpConfig = user.smtp_config || {};
+    const signature = user.signature || '';
+    
+    if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
+      return res.status(400).json({ error: "Configuración SMTP incompleta en el servidor" });
+    }
       return res.status(400).json({ error: "Faltan destinatarios o plantilla" });
     }
 
