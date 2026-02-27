@@ -490,6 +490,7 @@ export async function createApp() {
             html: fullHtml,
             text: plainText,
             attachments: attachments.length > 0 ? attachments : undefined,
+            messageId: `<${Date.now()}.${Math.random().toString(36).substring(2)}@mailpulse.orange>`,
             headers: {
               'X-Mailer': 'MailPulse Orange v2.0',
               'X-Priority': '3',
