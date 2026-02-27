@@ -278,6 +278,30 @@ export async function createApp() {
 
   // --- Email Routes ---
 
+  // Test SMTP connection
+  app.post("/api/test-smtp", authenticateToken, async (req: any, res) => {
+    const { host, port, user, pass } = req.body;
+
+    if (!host || !user || !pass) {
+      return res.status(400).json({ error: "Faltan datos de configuración" });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port: parseInt(port || "587"),
+      secure: port === "465",
+      auth: { user, pass },
+    });
+
+    try {
+      await transporter.verify();
+      res.json({ message: "Conexión establecida correctamente" });
+    } catch (error: any) {
+      console.error("SMTP Test Error:", error);
+      res.status(500).json({ error: error.message || "Error al conectar con el servidor SMTP" });
+    }
+  });
+
   // Email sending endpoint
   app.post("/api/send-emails", authenticateToken, async (req: any, res) => {
     // Get user from DB to ensure we have latest SMTP config
@@ -312,7 +336,13 @@ export async function createApp() {
     const results = [];
 
     for (const recipient of recipients) {
+      const targetEmail = recipient.email || recipient.Email || recipient.Correo || recipient.correo || recipient.CORREO;
+      
       try {
+        if (!targetEmail) {
+          throw new Error("No se encontró una dirección de correo para este destinatario");
+        }
+
         let personalizedBody = template.body;
         let personalizedSubject = template.subject;
 
@@ -331,22 +361,27 @@ export async function createApp() {
             personalizedBody += signature;
           }
           if (signatureImage) {
-            personalizedBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 300px; margin-top: 10px;">`;
+            // Ensure image is not too large for some clients, but base64 is generally fine
+            personalizedBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 300px; height: auto; margin-top: 10px;">`;
           }
           personalizedBody += `</div>`;
         }
 
         await transporter.sendMail({
           from: smtpConfig.from || smtpConfig.user,
-          to: recipient.email || recipient.Email || recipient.Correo || recipient.correo,
+          to: targetEmail,
           subject: personalizedSubject,
           html: personalizedBody,
         });
 
-        results.push({ email: recipient.email || recipient.Correo, status: "sent" });
+        results.push({ email: targetEmail, status: "sent" });
       } catch (error: any) {
-        console.error(`Error enviando a ${recipient.email}:`, error);
-        results.push({ email: recipient.email || recipient.Correo, status: "failed", error: error.message });
+        console.error(`Error enviando a ${targetEmail || 'desconocido'}:`, error);
+        results.push({ 
+          email: targetEmail || "Desconocido", 
+          status: "failed", 
+          error: error.message || "Error desconocido" 
+        });
       }
     }
 

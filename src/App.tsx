@@ -64,6 +64,7 @@ export default function App() {
   const [signature, setSignature] = useState('');
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isTestingSmtp, setIsTestingSmtp] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -127,6 +128,33 @@ export default function App() {
       alert('Error de conexión');
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    if (!token) return;
+    setIsTestingSmtp(true);
+    try {
+      const res = await fetch('/api/test-smtp', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(smtpConfig)
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'Conexión SMTP exitosa');
+      } else {
+        alert('Error SMTP: ' + (data.error || 'Error desconocido'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de conexión al servidor');
+    } finally {
+      setIsTestingSmtp(false);
     }
   };
 
@@ -790,7 +818,15 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="col-span-2 flex justify-end">
+                <div className="col-span-2 flex justify-end gap-3">
+                  <button 
+                    onClick={handleTestSmtp}
+                    disabled={isTestingSmtp || !smtpConfig.host || !smtpConfig.user}
+                    className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 disabled:opacity-50 transition-all flex items-center gap-2"
+                  >
+                    {isTestingSmtp ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
+                    Probar Conexión
+                  </button>
                   <button 
                     onClick={handleSaveSettings}
                     disabled={isSavingSettings}
@@ -840,7 +876,12 @@ export default function App() {
                     <tbody className="divide-y divide-slate-100">
                       {sendResults.map((result, i) => (
                         <tr key={i} className="hover:bg-slate-50/50">
-                          <td className="px-6 py-4 text-slate-700 font-medium">{result.email}</td>
+                          <td className="px-6 py-4 text-slate-700 font-medium">
+                            {result.email}
+                            {result.error && (
+                              <p className="text-[10px] text-red-400 font-normal mt-0.5">{result.error}</p>
+                            )}
+                          </td>
                           <td className="px-6 py-4">
                             {result.status === 'sent' ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
@@ -848,7 +889,7 @@ export default function App() {
                                 Éxito
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold" title={result.error}>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
                                 <AlertCircle size={12} />
                                 Error
                               </span>
