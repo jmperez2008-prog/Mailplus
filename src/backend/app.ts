@@ -378,148 +378,143 @@ export async function createApp() {
   // Email sending endpoint
   app.post("/api/send-emails", authenticateToken, async (req: any, res) => {
     const { recipients, template, signatureImage, logo } = req.body;
-    const user = await findUserById(req.user.id);
-    if (!user) return res.sendStatus(403);
 
-    const smtpConfig = user.smtp_config || {};
-    const signature = user.signature || '';
-    
-    if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
-      return res.status(400).json({ error: "Configuración SMTP incompleta en el servidor" });
-    }
-      return res.status(400).json({ error: "Faltan destinatarios o plantilla" });
-    }
+    try {
+      const user = await findUserById(req.user.id);
+      if (!user) return res.sendStatus(403);
 
-    if (!smtpConfig || !smtpConfig.host || !smtpConfig.user) {
-      return res.status(400).json({ error: "Configuración SMTP incompleta. Por favor configúrala en tu perfil." });
-    }
+      const smtpConfig = user.smtp_config || {};
+      const signature = user.signature || '';
 
-    // Use provided SMTP config or environment variables
-    const transporter = nodemailer.createTransport({
-      host: smtpConfig.host,
-      port: parseInt(smtpConfig.port || "587"),
-      secure: smtpConfig.port === "465",
-      auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.pass,
-      },
-    });
-
-    // Format sender correctly: "Name" <email@domain.com>
-    let sender = smtpConfig.user;
-    if (smtpConfig.from) {
-      if (smtpConfig.from.includes('<')) {
-        sender = smtpConfig.from;
-      } else {
-        sender = `"${smtpConfig.from}" <${smtpConfig.user}>`;
+      if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
+        return res.status(400).json({ error: "Configuración SMTP incompleta en el servidor" });
       }
-    }
 
-    const results = [];
+      if (!recipients || !template) {
+        return res.status(400).json({ error: "Faltan destinatarios o plantilla" });
+      }
 
-    for (const recipient of recipients) {
-      const targetEmail = recipient.email || recipient.Email || recipient.Correo || recipient.correo || recipient.CORREO;
-      
-      try {
+      const transporter = nodemailer.createTransport({
+        host: smtpConfig.host,
+        port: parseInt(smtpConfig.port || "587"),
+        secure: smtpConfig.port === "465",
+        auth: {
+          user: smtpConfig.user,
+          pass: smtpConfig.pass,
+        },
+      });
+
+      let sender = smtpConfig.user;
+      if (smtpConfig.from) {
+        if (smtpConfig.from.includes('<')) {
+          sender = smtpConfig.from;
+        } else {
+          sender = `"${smtpConfig.from}" <${smtpConfig.user}>`;
+        }
+      }
+
+      const results = [];
+      for (const recipient of recipients) {
+        const targetEmail = recipient.email || recipient.Email || recipient.Correo || recipient.correo || recipient.CORREO;
+        
         if (!targetEmail) {
-          throw new Error("No se encontró una dirección de correo para este destinatario");
+          results.push({ email: "Desconocido", status: "failed", error: "No se encontró email" });
+          continue;
         }
 
-        let personalizedBody = template.body;
-        let personalizedSubject = template.subject;
+        try {
+          let personalizedBody = template.body;
+          let personalizedSubject = template.subject;
 
-        // Simple variable replacement
-        Object.keys(recipient).forEach((key) => {
-          const value = recipient[key];
-          const regex = new RegExp(`{{${key}}}`, "g");
-          personalizedBody = personalizedBody.replace(regex, value);
-          personalizedSubject = personalizedSubject.replace(regex, value);
-        });
+          Object.keys(recipient).forEach((key) => {
+            const value = recipient[key];
+            const regex = new RegExp(`{{${key}}}`, "g");
+            personalizedBody = personalizedBody.replace(regex, value);
+            personalizedSubject = personalizedSubject.replace(regex, value);
+          });
 
-        const fullHtmlLogo = logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>` : '';
+          const fullHtmlLogo = logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>` : '';
+          
+          const attachments: any[] = [];
+          let contentBody = personalizedBody;
 
-        // Append signature if exists
-        const attachments: any[] = [];
-        let contentBody = personalizedBody;
-
-        if (signature || signatureImage) {
-          contentBody += `<br><br><div class="signature" style="border-top: 1px solid #eee; pt-4; mt-4;">`;
-          if (signature) {
-            contentBody += `<div style="color: #666; font-size: 14px;">${signature}</div>`;
+          if (signature || signatureImage) {
+            contentBody += `<br><br><div class="signature" style="border-top: 1px solid #eee; pt-4; mt-4;">`;
+            if (signature) {
+              contentBody += `<div style="color: #666; font-size: 14px;">${signature}</div>`;
+            }
+            if (signatureImage && signatureImage.startsWith('data:image/')) {
+              const [meta, data] = signatureImage.split(',');
+              const mimeMatch = meta.match(/:(.*?);/);
+              const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+              const extension = mimeType.split('/')[1] || 'png';
+              
+              attachments.push({
+                filename: `signature.${extension}`,
+                content: data,
+                encoding: 'base64',
+                cid: 'signature_image_cid'
+              });
+              
+              contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px; display: block;">`;
+            } else if (signatureImage) {
+              contentBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px; display: block;">`;
+            }
+            contentBody += `</div>`;
           }
-          if (signatureImage && signatureImage.startsWith('data:image/')) {
-            const [meta, data] = signatureImage.split(',');
-            const mimeMatch = meta.match(/:(.*?);/);
-            const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
-            const extension = mimeType.split('/')[1] || 'png';
-            
-            attachments.push({
-              filename: `signature.${extension}`,
-              content: data,
-              encoding: 'base64',
-              cid: 'signature_image_cid'
-            });
-            
-            contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px; display: block;">`;
-          } else if (signatureImage) {
-            contentBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px; display: block;">`;
-          }
-          contentBody += `</div>`;
+
+          const fullHtml = `
+            <!DOCTYPE html>
+            <html lang="es">
+              <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${personalizedSubject}</title>
+              </head>
+              <body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #ffffff;">
+                <div style="max-width: 600px; margin: 0 auto;">
+                  ${fullHtmlLogo}
+                  ${contentBody}
+                </div>
+              </body>
+            </html>
+          `.trim();
+
+          const plainText = contentBody.replace(/<[^>]*>?/gm, '').trim();
+
+          const info = await transporter.sendMail({
+            from: sender,
+            to: targetEmail,
+            replyTo: smtpConfig.user,
+            subject: personalizedSubject,
+            html: fullHtml,
+            text: plainText,
+            attachments: attachments.length > 0 ? attachments : undefined,
+            headers: {
+              'X-Mailer': 'MailPulse Orange v2.0',
+              'X-Priority': '3',
+            }
+          });
+
+          results.push({ 
+            email: targetEmail, 
+            status: "sent", 
+            messageId: info.messageId,
+            response: info.response 
+          });
+        } catch (error: any) {
+          results.push({ 
+            email: targetEmail, 
+            status: "failed", 
+            error: error.message || "Error desconocido" 
+          });
         }
-
-        // Wrap in a full HTML document structure
-        const fullHtml = `
-          <!DOCTYPE html>
-          <html lang="es">
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>${personalizedSubject}</title>
-            </head>
-            <body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #ffffff;">
-              <div style="max-width: 600px; margin: 0 auto;">
-                ${fullHtmlLogo}
-                ${contentBody}
-              </div>
-            </body>
-          </html>
-        `.trim();
-
-        // Create plain text version (strip HTML)
-        const plainText = contentBody.replace(/<[^>]*>?/gm, '').trim();
-
-        const info = await transporter.sendMail({
-          from: sender,
-          to: targetEmail,
-          replyTo: smtpConfig.user,
-          subject: personalizedSubject,
-          html: fullHtml,
-          text: plainText,
-          attachments: attachments.length > 0 ? attachments : undefined,
-          headers: {
-            'X-Mailer': 'MailPulse Orange v2.0',
-            'X-Priority': '3', // Normal priority
-          }
-        });
-
-        console.log(`Correo enviado a ${targetEmail}. ID: ${info.messageId}. Response: ${info.response}`);
-        results.push({ 
-          email: targetEmail, 
-          status: "sent", 
-          messageId: info.messageId,
-          response: info.response 
-        });
-      } catch (error: any) {
-        console.error(`Error enviando a ${targetEmail || 'desconocido'}:`, error);
-        results.push({ 
-          email: targetEmail || "Desconocido", 
-          status: "failed", 
-          error: error.message || "Error desconocido" 
-        });
       }
+      res.json({ results });
+    } catch (error: any) {
+      console.error("Error fatal en /api/send-emails:", error);
+      res.status(500).json({ error: "Error interno del servidor al procesar la solicitud." });
     }
-
-    res.json({ results });
   });
 
   return app;
