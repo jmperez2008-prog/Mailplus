@@ -408,26 +408,45 @@ export async function createApp() {
         });
 
         // Append signature if exists
+        const attachments: any[] = [];
+        let finalBody = personalizedBody;
+
         if (signature || signatureImage) {
-          personalizedBody += `<br><br><div class="signature">`;
+          finalBody += `<br><br><div class="signature">`;
           if (signature) {
-            personalizedBody += signature;
+            finalBody += signature;
           }
-          if (signatureImage) {
-            // Ensure image is not too large for some clients, but base64 is generally fine
-            personalizedBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px;">`;
+          if (signatureImage && signatureImage.startsWith('data:image/')) {
+            const [meta, data] = signatureImage.split(',');
+            const mimeMatch = meta.match(/:(.*?);/);
+            const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+            const extension = mimeType.split('/')[1] || 'png';
+            
+            attachments.push({
+              filename: `signature.${extension}`,
+              content: data,
+              encoding: 'base64',
+              cid: 'signature_image_cid'
+            });
+            
+            finalBody += `<br><img src="cid:signature_image_cid" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px;">`;
+          } else if (signatureImage) {
+            // Fallback for URL-based images
+            finalBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px;">`;
           }
-          personalizedBody += `</div>`;
+          finalBody += `</div>`;
         }
 
-        await transporter.sendMail({
+        const info = await transporter.sendMail({
           from: smtpConfig.from || smtpConfig.user,
           to: targetEmail,
           subject: personalizedSubject,
-          html: personalizedBody,
+          html: finalBody,
+          attachments: attachments.length > 0 ? attachments : undefined
         });
 
-        results.push({ email: targetEmail, status: "sent" });
+        console.log(`Correo enviado a ${targetEmail}. ID: ${info.messageId}`);
+        results.push({ email: targetEmail, status: "sent", messageId: info.messageId });
       } catch (error: any) {
         console.error(`Error enviando a ${targetEmail || 'desconocido'}:`, error);
         results.push({ 
