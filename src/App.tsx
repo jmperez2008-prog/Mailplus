@@ -72,7 +72,7 @@ export default function App() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [sendResults, setSendResults] = useState<{ email: string; status: string; error?: string }[]>([]);
+  const [sendResults, setSendResults] = useState<{ email: string; status: string; error?: string; response?: string }[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [personalizedPreviews, setPersonalizedPreviews] = useState<Record<number, EmailTemplate>>({});
 
@@ -1035,6 +1035,9 @@ export default function App() {
                             {result.email}
                             {result.error && (
                               <p className="text-[10px] text-red-400 font-normal mt-0.5">{result.error}</p>
+                            )}
+                            {result.response && (
+                              <p className="text-[10px] text-slate-400 font-normal mt-0.5 italic">Servidor: {result.response}</p>
                             )}
                           </td>
                           <td className="px-6 py-4">

@@ -333,7 +333,7 @@ export async function createApp() {
 
   // Test SMTP connection
   app.post("/api/test-smtp", authenticateToken, async (req: any, res) => {
-    const { host, port, user, pass } = req.body;
+    const { host, port, user, pass, from } = req.body;
 
     if (!host || !user || !pass) {
       return res.status(400).json({ error: "Faltan datos de configuración" });
@@ -346,9 +346,29 @@ export async function createApp() {
       auth: { user, pass },
     });
 
+    // Format sender correctly
+    let sender = user;
+    if (from) {
+      if (from.includes('<')) {
+        sender = from;
+      } else {
+        sender = `"${from}" <${user}>`;
+      }
+    }
+
     try {
       await transporter.verify();
-      res.json({ message: "Conexión establecida correctamente" });
+      
+      // Send a real test email to the user themselves
+      await transporter.sendMail({
+        from: sender,
+        to: user, 
+        subject: "MailPulse Orange - Prueba de Conexión",
+        text: "Si recibes este correo, tu configuración SMTP es correcta y la entrega funciona.",
+        html: "<p>Si recibes este correo, tu configuración SMTP es <strong>correcta</strong> y la entrega funciona.</p>"
+      });
+
+      res.json({ message: "Conexión establecida y correo de prueba enviado a tu bandeja de entrada." });
     } catch (error: any) {
       console.error("SMTP Test Error:", error);
       res.status(500).json({ error: error.message || "Error al conectar con el servidor SMTP" });
@@ -386,6 +406,16 @@ export async function createApp() {
       },
     });
 
+    // Format sender correctly: "Name" <email@domain.com>
+    let sender = smtpConfig.user;
+    if (smtpConfig.from) {
+      if (smtpConfig.from.includes('<')) {
+        sender = smtpConfig.from;
+      } else {
+        sender = `"${smtpConfig.from}" <${smtpConfig.user}>`;
+      }
+    }
+
     const results = [];
 
     for (const recipient of recipients) {
@@ -407,14 +437,16 @@ export async function createApp() {
           personalizedSubject = personalizedSubject.replace(regex, value);
         });
 
+        const fullHtmlLogo = logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>` : '';
+
         // Append signature if exists
         const attachments: any[] = [];
-        let finalBody = personalizedBody;
+        let contentBody = personalizedBody;
 
         if (signature || signatureImage) {
-          finalBody += `<br><br><div class="signature">`;
+          contentBody += `<br><br><div class="signature" style="border-top: 1px solid #eee; pt-4; mt-4;">`;
           if (signature) {
-            finalBody += signature;
+            contentBody += `<div style="color: #666; font-size: 14px;">${signature}</div>`;
           }
           if (signatureImage && signatureImage.startsWith('data:image/')) {
             const [meta, data] = signatureImage.split(',');
@@ -429,24 +461,55 @@ export async function createApp() {
               cid: 'signature_image_cid'
             });
             
-            finalBody += `<br><img src="cid:signature_image_cid" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px;">`;
+            contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px; display: block;">`;
           } else if (signatureImage) {
-            // Fallback for URL-based images
-            finalBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px;">`;
+            contentBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px; display: block;">`;
           }
-          finalBody += `</div>`;
+          contentBody += `</div>`;
         }
 
+        // Wrap in a full HTML document structure
+        const fullHtml = `
+          <!DOCTYPE html>
+          <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${personalizedSubject}</title>
+            </head>
+            <body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #ffffff;">
+              <div style="max-width: 600px; margin: 0 auto;">
+                ${fullHtmlLogo}
+                ${contentBody}
+              </div>
+            </body>
+          </html>
+        `.trim();
+
+        // Create plain text version (strip HTML)
+        const plainText = contentBody.replace(/<[^>]*>?/gm, '').trim();
+
         const info = await transporter.sendMail({
-          from: smtpConfig.from || smtpConfig.user,
+          from: sender,
           to: targetEmail,
+          replyTo: smtpConfig.user,
           subject: personalizedSubject,
-          html: finalBody,
-          attachments: attachments.length > 0 ? attachments : undefined
+          html: fullHtml,
+          text: plainText,
+          attachments: attachments.length > 0 ? attachments : undefined,
+          headers: {
+            'X-Mailer': 'MailPulse Orange v2.0',
+            'X-Priority': '3', // Normal priority
+          }
         });
 
-        console.log(`Correo enviado a ${targetEmail}. ID: ${info.messageId}`);
-        results.push({ email: targetEmail, status: "sent", messageId: info.messageId });
+        console.log(`Correo enviado a ${targetEmail}. ID: ${info.messageId}. Response: ${info.response}`);
+        results.push({ 
+          email: targetEmail, 
+          status: "sent", 
+          messageId: info.messageId,
+          response: info.response 
+        });
       } catch (error: any) {
         console.error(`Error enviando a ${targetEmail || 'desconocido'}:`, error);
         results.push({ 
