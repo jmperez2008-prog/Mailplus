@@ -60,10 +60,8 @@ const initializeDefaultAdmin = async () => {
       username: "Juanma",
       password: hashedPassword,
       role: "admin",
-      smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
-      signature: "<p>Saludos,<br><strong>Juanma</strong><br>Administrador</p>",
-      signature_image: "",
-      logo: ""
+      smtp_config: { host: "", port: "587", user: "", pass: "", from: "", signature_image: "", logo: "" },
+      signature: "<p>Saludos,<br><strong>Juanma</strong><br>Administrador</p>"
     };
 
     if (supabase) {
@@ -154,7 +152,8 @@ export async function createApp() {
         const mappedUser = {
           ...userWithoutPassword,
           smtpConfig: user.smtp_config || user.smtpConfig,
-          signatureImage: user.signature_image || user.signatureImage
+          signatureImage: user.signature_image || (user.smtp_config && user.smtp_config.signature_image) || user.signatureImage || "",
+          logo: user.logo || (user.smtp_config && user.smtp_config.logo) || ""
         };
         res.json({ token, user: mappedUser });
       } else {
@@ -175,7 +174,8 @@ export async function createApp() {
     const safeUsers = users.map(({ password, ...u }) => ({
       ...u,
       smtpConfig: u.smtp_config || u.smtpConfig,
-      signatureImage: u.signature_image || u.signatureImage
+      signatureImage: u.signature_image || (u.smtp_config && u.smtp_config.signature_image) || u.signatureImage || "",
+      logo: u.logo || (u.smtp_config && u.smtp_config.logo) || ""
     }));
     res.json(safeUsers);
   });
@@ -194,10 +194,8 @@ export async function createApp() {
       username,
       password: hashedPassword,
       role: role || 'user',
-      smtp_config: { host: "", port: "587", user: "", pass: "", from: "" },
-      signature: "",
-      signature_image: "",
-      logo: ""
+      smtp_config: { host: "", port: "587", user: "", pass: "", from: "", signature_image: "", logo: "" },
+      signature: ""
     };
 
     if (supabase) {
@@ -227,10 +225,15 @@ export async function createApp() {
     const { smtpConfig, signature, signatureImage, password, logo } = req.body;
     
     const updates: any = {};
-    if (smtpConfig) updates.smtp_config = smtpConfig;
+    const currentSmtpConfig = user.smtp_config || {};
+    const newSmtpConfig = { ...currentSmtpConfig, ...(smtpConfig || {}) };
+
     if (signature !== undefined) updates.signature = signature;
-    if (signatureImage !== undefined) updates.signature_image = signatureImage;
-    if (logo !== undefined) updates.logo = logo;
+    if (signatureImage !== undefined) newSmtpConfig.signature_image = signatureImage;
+    if (logo !== undefined) newSmtpConfig.logo = logo;
+    
+    updates.smtp_config = newSmtpConfig;
+
     if (password) {
       updates.password = await bcrypt.hash(password, 10);
     }
@@ -239,18 +242,26 @@ export async function createApp() {
       const { data, error } = await supabase.from('app_users').update(updates).eq('id', userId).select().single();
       if (error) return res.status(500).json({ error: error.message });
       const { password: _, ...safeUser } = data;
-      res.json({ ...safeUser, smtpConfig: safeUser.smtp_config });
+      res.json({ 
+        ...safeUser, 
+        smtpConfig: safeUser.smtp_config,
+        signatureImage: safeUser.signature_image || (safeUser.smtp_config && safeUser.smtp_config.signature_image) || "",
+        logo: safeUser.logo || (safeUser.smtp_config && safeUser.smtp_config.logo) || ""
+      });
     } else {
       // Local update
       const userIndex = localUsers.findIndex(u => u.id === userId);
-      if (smtpConfig) localUsers[userIndex].smtpConfig = smtpConfig;
+      localUsers[userIndex].smtp_config = newSmtpConfig;
       if (signature !== undefined) localUsers[userIndex].signature = signature;
-      if (req.body.signatureImage !== undefined) localUsers[userIndex].signatureImage = req.body.signatureImage;
-      if (logo !== undefined) localUsers[userIndex].logo = logo;
       if (password) localUsers[userIndex].password = updates.password;
       
       const { password: _, ...safeUser } = localUsers[userIndex];
-      res.json(safeUser);
+      res.json({
+        ...safeUser,
+        smtpConfig: safeUser.smtp_config,
+        signatureImage: safeUser.signature_image || (safeUser.smtp_config && safeUser.smtp_config.signature_image) || "",
+        logo: safeUser.logo || (safeUser.smtp_config && safeUser.smtp_config.logo) || ""
+      });
     }
   });
 
