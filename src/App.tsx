@@ -259,6 +259,7 @@ export default function App() {
     const result = await generateDraftTemplate(`${goal}. El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. Incluye un placeholder para el logotipo.`);
     if (result) {
       setTemplate(result);
+      setPersonalizedPreviews({});
     }
     setIsGenerating(false);
   };
@@ -271,16 +272,21 @@ export default function App() {
     }
 
     setIsGenerating(true);
-    // Use the first recipient to generate the base template
-    const result = await generatePersonalizedEmail(
-      `Genera un correo profesional de Orange basado en esta petición: ${aiExplanation}`,
-      validRecipients[0],
-      "Contacto personalizado"
-    );
+    
+    // Extract available fields to tell the AI what placeholders to use
+    const availableFields = Object.keys(validRecipients[0]).filter(k => k !== 'Email' && k !== 'Correo' && k !== 'email');
+    const fieldsText = availableFields.length > 0 
+      ? `Usa estrictamente estas variables entre llaves dobles para personalizar el contenido: ${availableFields.map(f => `{{${f}}}`).join(', ')}.` 
+      : '';
+
+    const goal = `Genera un correo profesional de Orange basado en esta petición: ${aiExplanation}. ${fieldsText} El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. No uses nombres reales, usa las variables entre llaves dobles.`;
+    
+    const result = await generateDraftTemplate(goal);
     
     if (result) {
       setTemplate(result);
       setRecipients(validRecipients);
+      setPersonalizedPreviews({});
       setStep(3);
     }
     setIsGenerating(false);
@@ -346,7 +352,8 @@ export default function App() {
           recipients,
           template,
           signatureImage: signatureImage,
-          logo: logo
+          logo: logo,
+          personalizedPreviews: personalizedPreviews
         })
       });
       const data = await response.json();

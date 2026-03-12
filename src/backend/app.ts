@@ -388,7 +388,7 @@ export async function createApp() {
 
   // Email sending endpoint
   app.post("/api/send-emails", authenticateToken, async (req: any, res) => {
-    const { recipients, template, signatureImage, logo } = req.body;
+    const { recipients, template, signatureImage, logo, personalizedPreviews } = req.body;
 
     try {
       const user = await findUserById(req.user.id);
@@ -416,16 +416,26 @@ export async function createApp() {
       });
 
       let sender = smtpConfig.user;
+      let replyToAddress = smtpConfig.user;
+      
       if (smtpConfig.from) {
         if (smtpConfig.from.includes('<')) {
           sender = smtpConfig.from;
+          const match = smtpConfig.from.match(/<([^>]+)>/);
+          if (match) {
+            replyToAddress = match[1];
+          }
+        } else if (smtpConfig.from.includes('@')) {
+          sender = smtpConfig.from;
+          replyToAddress = smtpConfig.from;
         } else {
           sender = `"${smtpConfig.from}" <${smtpConfig.user}>`;
         }
       }
 
       const results = [];
-      for (const recipient of recipients) {
+      for (let i = 0; i < recipients.length; i++) {
+        const recipient = recipients[i];
         const targetEmail = recipient.email || recipient.Email || recipient.Correo || recipient.correo || recipient.CORREO;
         
         if (!targetEmail) {
@@ -437,12 +447,19 @@ export async function createApp() {
           let personalizedBody = template.body;
           let personalizedSubject = template.subject;
 
-          Object.keys(recipient).forEach((key) => {
-            const value = recipient[key];
-            const regex = new RegExp(`{{${key}}}`, "g");
-            personalizedBody = personalizedBody.replace(regex, value);
-            personalizedSubject = personalizedSubject.replace(regex, value);
-          });
+          // Use AI personalized preview if available for this recipient
+          if (personalizedPreviews && personalizedPreviews[i]) {
+            personalizedBody = personalizedPreviews[i].body;
+            personalizedSubject = personalizedPreviews[i].subject;
+          } else {
+            // Otherwise, do standard placeholder replacement
+            Object.keys(recipient).forEach((key) => {
+              const value = recipient[key];
+              const regex = new RegExp(`{{${key}}}`, "g");
+              personalizedBody = personalizedBody.replace(regex, value);
+              personalizedSubject = personalizedSubject.replace(regex, value);
+            });
+          }
 
           const fullHtmlLogo = logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>` : '';
           
@@ -496,7 +513,7 @@ export async function createApp() {
           const info = await transporter.sendMail({
             from: sender,
             to: targetEmail,
-            replyTo: smtpConfig.user,
+            replyTo: replyToAddress,
             subject: personalizedSubject,
             html: fullHtml,
             text: plainText,
