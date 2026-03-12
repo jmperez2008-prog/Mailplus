@@ -455,9 +455,9 @@ export async function createApp() {
             // Otherwise, do standard placeholder replacement
             Object.keys(recipient).forEach((key) => {
               const value = recipient[key];
-              const regex = new RegExp(`{{${key}}}`, "g");
-              personalizedBody = personalizedBody.replace(regex, value);
-              personalizedSubject = personalizedSubject.replace(regex, value);
+              const regex = new RegExp(`{{\\s*${key}\\s*}}`, "gi");
+              personalizedBody = personalizedBody.replace(regex, value || '');
+              personalizedSubject = personalizedSubject.replace(regex, value || '');
             });
           }
 

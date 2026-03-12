@@ -381,7 +381,21 @@ export default function App() {
   const currentPreview = useMemo(() => {
     const base = personalizedPreviews[activePreviewIndex] || template;
     let body = base.body;
+    let subject = base.subject;
     
+    // Do standard placeholder replacement if not AI personalized
+    if (!personalizedPreviews[activePreviewIndex]) {
+      const recipient = recipients[activePreviewIndex];
+      if (recipient) {
+        Object.keys(recipient).forEach((key) => {
+          const value = recipient[key];
+          const regex = new RegExp(`{{\\s*${key}\\s*}}`, "gi");
+          body = body.replace(regex, value || '');
+          subject = subject.replace(regex, value || '');
+        });
+      }
+    }
+
     if (logo) {
       body = `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>${body}`;
     }
@@ -394,8 +408,8 @@ export default function App() {
       body += `</div>`;
     }
 
-    return { ...base, body };
-  }, [activePreviewIndex, personalizedPreviews, template, logo, signature, signatureImage]);
+    return { ...base, body, subject };
+  }, [activePreviewIndex, personalizedPreviews, template, logo, signature, signatureImage, recipients]);
 
   if (!user) {
     return <Login onLogin={handleLogin} />;
