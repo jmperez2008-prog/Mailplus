@@ -453,11 +453,15 @@ export async function createApp() {
             personalizedSubject = personalizedPreviews[i].subject;
           } else {
             // Otherwise, do standard placeholder replacement
-            Object.keys(recipient).forEach((key) => {
-              const value = recipient[key];
-              const regex = new RegExp(`{{\\s*${key}\\s*}}`, "gi");
-              personalizedBody = personalizedBody.replace(regex, value || '');
-              personalizedSubject = personalizedSubject.replace(regex, value || '');
+            personalizedBody = personalizedBody.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
+              const key = p1.trim().toLowerCase();
+              const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
+              return matchingKey ? (recipient[matchingKey] || '') : match;
+            });
+            personalizedSubject = personalizedSubject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
+              const key = p1.trim().toLowerCase();
+              const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
+              return matchingKey ? (recipient[matchingKey] || '') : match;
             });
           }
 

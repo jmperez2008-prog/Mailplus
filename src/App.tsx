@@ -387,11 +387,15 @@ export default function App() {
     if (!personalizedPreviews[activePreviewIndex]) {
       const recipient = recipients[activePreviewIndex];
       if (recipient) {
-        Object.keys(recipient).forEach((key) => {
-          const value = recipient[key];
-          const regex = new RegExp(`{{\\s*${key}\\s*}}`, "gi");
-          body = body.replace(regex, value || '');
-          subject = subject.replace(regex, value || '');
+        body = body.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
+          const key = p1.trim().toLowerCase();
+          const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
+          return matchingKey ? (recipient[matchingKey] || '') : match;
+        });
+        subject = subject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
+          const key = p1.trim().toLowerCase();
+          const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
+          return matchingKey ? (recipient[matchingKey] || '') : match;
         });
       }
     }
