@@ -434,9 +434,14 @@ export default function App() {
         }
       }
 
-      // Fix sender_email to always be a valid mailto link
-      body = body.replace(/mailto:{{\s*sender_email\s*}}/gi, `mailto:${replyToAddress}`);
-      body = body.replace(/{{\s*sender_email\s*}}/gi, `mailto:${replyToAddress}`);
+      // Replace the variable with the raw email first
+      body = body.replace(/{{\s*sender_email\s*}}/gi, replyToAddress);
+      
+      // Fix any double mailto:
+      body = body.replace(/mailto:\s*mailto:/gi, 'mailto:');
+      
+      // Fix any href that is JUST the email address without mailto:
+      body = body.replace(new RegExp(`href=["']?${replyToAddress}["']?`, 'gi'), `href="mailto:${replyToAddress}"`);
 
       body = body.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();

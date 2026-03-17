@@ -491,9 +491,14 @@ export async function createApp() {
             <p>Este correo se ha enviado a ${targetEmail}. Si no deseas recibir más correos, puedes <a href="{{unsubscribe_link}}">darte de baja aquí</a>.</p>
           </div>`;
 
-          // Fix sender_email to always be a valid mailto link
-          contentBody = contentBody.replace(/mailto:{{\s*sender_email\s*}}/gi, `mailto:${replyToAddress}`);
-          contentBody = contentBody.replace(/{{\s*sender_email\s*}}/gi, `mailto:${replyToAddress}`);
+          // Replace the variable with the raw email first
+          contentBody = contentBody.replace(/{{\s*sender_email\s*}}/gi, replyToAddress);
+          
+          // Fix any double mailto:
+          contentBody = contentBody.replace(/mailto:\s*mailto:/gi, 'mailto:');
+          
+          // Fix any href that is JUST the email address without mailto:
+          contentBody = contentBody.replace(new RegExp(`href=["']?${replyToAddress}["']?`, 'gi'), `href="mailto:${replyToAddress}"`);
 
           // Run placeholder replacement on the body (including footer)
           contentBody = contentBody.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
