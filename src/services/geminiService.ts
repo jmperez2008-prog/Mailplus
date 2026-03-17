@@ -68,7 +68,7 @@ export async function generateDraftTemplate(goal: string) {
   const prompt = `
     Crea una plantilla de correo electrónico profesional para el siguiente objetivo: "${goal}".
     El estilo debe ser corporativo de Orange (somos distribuidores oficiales).
-    Usa variables entre llaves dobles como {{nombre}}, {{empresa}}, {{cargo}} para las partes que deban ser personalizadas.
+    Usa SOLO las variables entre llaves dobles que se te hayan indicado en el objetivo (por ejemplo {{Nombre}}, {{Empresa}}). NO inventes variables nuevas como {{cargo}} o {{puesto}} si no se te han pedido.
     Incluye una estructura HTML limpia con acentos en color naranja (#FF7900).
     Devuelve un JSON con "subject" y "body" (HTML básico).
   `;

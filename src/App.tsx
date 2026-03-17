@@ -276,8 +276,8 @@ export default function App() {
     // Extract available fields to tell the AI what placeholders to use
     const availableFields = Object.keys(validRecipients[0]).filter(k => k !== 'Email' && k !== 'Correo' && k !== 'email');
     const fieldsText = availableFields.length > 0 
-      ? `Usa estrictamente estas variables entre llaves dobles para personalizar el contenido: ${availableFields.map(f => `{{${f}}}`).join(', ')}.` 
-      : '';
+      ? `Usa estrictamente estas variables entre llaves dobles para personalizar el contenido: ${availableFields.map(f => `{{${f}}}`).join(', ')}. NO inventes variables que no estén en esta lista (como {{cargo}}, {{puesto}}, etc).` 
+      : 'NO uses variables entre llaves dobles para personalizar el contenido, ya que no hay datos disponibles.';
 
     const goal = `Genera un correo profesional de Orange basado en esta petición: ${aiExplanation}. ${fieldsText} El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. No uses nombres reales, usa las variables entre llaves dobles.`;
     
@@ -404,13 +404,15 @@ export default function App() {
     if (recipient) {
       body = body.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();
+        if (key === 'unsubscribe_link') return match;
         const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
-        return matchingKey ? (recipient[matchingKey] || '') : match;
+        return matchingKey ? (recipient[matchingKey] || '') : '';
       });
       subject = subject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();
+        if (key === 'unsubscribe_link') return match;
         const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
-        return matchingKey ? (recipient[matchingKey] || '') : match;
+        return matchingKey ? (recipient[matchingKey] || '') : '';
       });
     }
 
