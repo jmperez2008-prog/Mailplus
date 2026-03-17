@@ -434,13 +434,14 @@ export default function App() {
         }
       }
 
+      // Fix sender_email to always be a valid mailto link
+      body = body.replace(/mailto:{{\s*sender_email\s*}}/gi, `mailto:${replyToAddress}`);
+      body = body.replace(/{{\s*sender_email\s*}}/gi, `mailto:${replyToAddress}`);
+
       body = body.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();
         if (key === 'unsubscribe_link') {
           return `mailto:${replyToAddress}?subject=Baja%20de%20comunicaciones&body=Por%20favor,%20dame%20de%20baja%20de%20esta%20lista%20de%20correo.%20Mi%20email%20es:%20${targetEmail}`;
-        }
-        if (key === 'sender_email') {
-          return replyToAddress;
         }
         const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
         return matchingKey ? (recipient[matchingKey] || '') : '';
@@ -448,7 +449,6 @@ export default function App() {
       subject = subject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();
         if (key === 'unsubscribe_link') return '';
-        if (key === 'sender_email') return replyToAddress;
         const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
         return matchingKey ? (recipient[matchingKey] || '') : '';
       });

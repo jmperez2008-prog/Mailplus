@@ -112,6 +112,7 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
               <tr>
                 <th className="px-6 py-4 font-semibold text-slate-600">Usuario</th>
                 <th className="px-6 py-4 font-semibold text-slate-600">Rol</th>
+                <th className="px-6 py-4 font-semibold text-slate-600">Correos Enviados</th>
                 <th className="px-6 py-4 font-semibold text-slate-600 text-right">Acciones</th>
               </tr>
             </thead>
@@ -129,6 +130,11 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
                       user.role === 'admin' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700'
                     }`}>
                       {user.role === 'admin' ? 'Administrador' : 'Usuario'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-50 text-orange-700 border border-orange-100">
+                      {user.sent_emails_count || 0}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">

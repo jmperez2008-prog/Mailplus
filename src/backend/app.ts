@@ -175,7 +175,8 @@ export async function createApp() {
       ...u,
       smtpConfig: u.smtp_config || u.smtpConfig,
       signatureImage: u.signature_image || (u.smtp_config && u.smtp_config.signature_image) || u.signatureImage || "",
-      logo: u.logo || (u.smtp_config && u.smtp_config.logo) || ""
+      logo: u.logo || (u.smtp_config && u.smtp_config.logo) || "",
+      sent_emails_count: (u.smtp_config && u.smtp_config.sent_emails_count) || 0
     }));
     res.json(safeUsers);
   });
@@ -358,14 +359,18 @@ export async function createApp() {
     });
 
     // Format sender correctly
-    let sender = user;
+    let replyToAddress = user;
     if (from) {
       if (from.includes('<')) {
-        sender = from;
-      } else {
-        sender = `"${from}" <${user}>`;
+        const match = from.match(/<([^>]+)>/);
+        if (match) {
+          replyToAddress = match[1];
+        }
+      } else if (from.includes('@')) {
+        replyToAddress = from;
       }
     }
+    const sender = `"Orange Empresas" <${replyToAddress}>`;
 
     try {
       await transporter.verify();
@@ -415,23 +420,20 @@ export async function createApp() {
         },
       });
 
-      let sender = smtpConfig.user;
       let replyToAddress = smtpConfig.user;
       
       if (smtpConfig.from) {
         if (smtpConfig.from.includes('<')) {
-          sender = smtpConfig.from;
           const match = smtpConfig.from.match(/<([^>]+)>/);
           if (match) {
             replyToAddress = match[1];
           }
         } else if (smtpConfig.from.includes('@')) {
-          sender = smtpConfig.from;
           replyToAddress = smtpConfig.from;
-        } else {
-          sender = `"${smtpConfig.from}" <${smtpConfig.user}>`;
         }
       }
+
+      const sender = `"Orange Empresas" <${replyToAddress}>`;
 
       const results = [];
       for (let i = 0; i < recipients.length; i++) {
@@ -489,14 +491,15 @@ export async function createApp() {
             <p>Este correo se ha enviado a ${targetEmail}. Si no deseas recibir más correos, puedes <a href="{{unsubscribe_link}}">darte de baja aquí</a>.</p>
           </div>`;
 
+          // Fix sender_email to always be a valid mailto link
+          contentBody = contentBody.replace(/mailto:{{\s*sender_email\s*}}/gi, `mailto:${replyToAddress}`);
+          contentBody = contentBody.replace(/{{\s*sender_email\s*}}/gi, `mailto:${replyToAddress}`);
+
           // Run placeholder replacement on the body (including footer)
           contentBody = contentBody.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
             const key = p1.trim().toLowerCase();
             if (key === 'unsubscribe_link') {
               return `mailto:${replyToAddress}?subject=Baja%20de%20comunicaciones&body=Por%20favor,%20dame%20de%20baja%20de%20esta%20lista%20de%20correo.%20Mi%20email%20es:%20${targetEmail}`;
-            }
-            if (key === 'sender_email') {
-              return replyToAddress;
             }
             const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
             return matchingKey ? (recipient[matchingKey] || '') : '';
@@ -504,7 +507,6 @@ export async function createApp() {
           personalizedSubject = personalizedSubject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
             const key = p1.trim().toLowerCase();
             if (key === 'unsubscribe_link') return '';
-            if (key === 'sender_email') return replyToAddress;
             const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
             return matchingKey ? (recipient[matchingKey] || '') : '';
           });
@@ -557,6 +559,25 @@ export async function createApp() {
           });
         }
       }
+
+      // Update sent_emails_count
+      const successCount = results.filter(r => r.status === "sent").length;
+      if (successCount > 0) {
+        const currentSmtpConfig = user.smtp_config || {};
+        const newCount = (currentSmtpConfig.sent_emails_count || 0) + successCount;
+        const newSmtpConfig = { ...currentSmtpConfig, sent_emails_count: newCount };
+        
+        if (supabase) {
+          await supabase.from('app_users').update({ smtp_config: newSmtpConfig }).eq('id', user.id);
+        } else {
+          const localUser = localUsers.find(u => u.id === user.id);
+          if (localUser) {
+            localUser.smtp_config = newSmtpConfig;
+            localUser.smtpConfig = newSmtpConfig;
+          }
+        }
+      }
+
       res.json({ results });
     } catch (error: any) {
       console.error("Error fatal en /api/send-emails:", error);

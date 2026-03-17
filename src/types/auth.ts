@@ -8,6 +8,7 @@ export interface User {
   signature?: string;
   signatureImage?: string;
   logo?: string;
+  sent_emails_count?: number;
 }
 
 export interface SMTPConfig {
