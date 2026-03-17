@@ -449,27 +449,17 @@ export async function createApp() {
 
           // Use AI personalized preview if available for this recipient
           if (personalizedPreviews && personalizedPreviews[i]) {
-            personalizedBody = personalizedPreviews[i].body;
+            contentBody = personalizedPreviews[i].body;
             personalizedSubject = personalizedPreviews[i].subject;
           } else {
-            // Otherwise, do standard placeholder replacement
-            personalizedBody = personalizedBody.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
-              const key = p1.trim().toLowerCase();
-              const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
-              return matchingKey ? (recipient[matchingKey] || '') : match;
-            });
-            personalizedSubject = personalizedSubject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
-              const key = p1.trim().toLowerCase();
-              const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
-              return matchingKey ? (recipient[matchingKey] || '') : match;
-            });
+            contentBody = template.body;
+            personalizedSubject = template.subject;
           }
 
           const fullHtmlLogo = logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>` : '';
           
           const attachments: any[] = [];
-          let contentBody = personalizedBody;
-
+          
           if (signature || signatureImage) {
             contentBody += `<br><br><div class="signature" style="border-top: 1px solid #eee; pt-4; mt-4;">`;
             if (signature) {
@@ -494,6 +484,22 @@ export async function createApp() {
             }
             contentBody += `</div>`;
           }
+
+          contentBody += `<br><br><div style="text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+            <p>Este correo se ha enviado a ${targetEmail}. Si no deseas recibir más correos, puedes <a href="{{unsubscribe_link}}">darte de baja aquí</a>.</p>
+          </div>`;
+
+          // Run placeholder replacement on the body (including footer)
+          contentBody = contentBody.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
+            const key = p1.trim().toLowerCase();
+            const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
+            return matchingKey ? (recipient[matchingKey] || '') : match;
+          });
+          personalizedSubject = personalizedSubject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
+            const key = p1.trim().toLowerCase();
+            const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
+            return matchingKey ? (recipient[matchingKey] || '') : match;
+          });
 
           const fullHtml = `
             <!DOCTYPE html>

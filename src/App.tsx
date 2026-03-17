@@ -383,23 +383,6 @@ export default function App() {
     let body = base.body;
     let subject = base.subject;
     
-    // Do standard placeholder replacement if not AI personalized
-    if (!personalizedPreviews[activePreviewIndex]) {
-      const recipient = recipients[activePreviewIndex];
-      if (recipient) {
-        body = body.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
-          const key = p1.trim().toLowerCase();
-          const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
-          return matchingKey ? (recipient[matchingKey] || '') : match;
-        });
-        subject = subject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
-          const key = p1.trim().toLowerCase();
-          const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
-          return matchingKey ? (recipient[matchingKey] || '') : match;
-        });
-      }
-    }
-
     if (logo) {
       body = `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>${body}`;
     }
@@ -410,6 +393,25 @@ export default function App() {
       if (signature) body += `${signature}`;
       if (signatureImage) body += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; margin-top: 10px;">`;
       body += `</div>`;
+    }
+
+    body += `<br><br><div style="text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+      <p>Este correo se ha enviado a {{Email}}. Si no deseas recibir más correos, puedes <a href="{{unsubscribe_link}}">darte de baja aquí</a>.</p>
+    </div>`;
+
+    // Always run placeholder replacement on the body (including footer)
+    const recipient = recipients[activePreviewIndex];
+    if (recipient) {
+      body = body.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
+        const key = p1.trim().toLowerCase();
+        const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
+        return matchingKey ? (recipient[matchingKey] || '') : match;
+      });
+      subject = subject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
+        const key = p1.trim().toLowerCase();
+        const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
+        return matchingKey ? (recipient[matchingKey] || '') : match;
+      });
     }
 
     return { ...base, body, subject };
