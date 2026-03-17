@@ -434,19 +434,25 @@ export default function App() {
         }
       }
 
-      // Normalize mailto:{{sender_email}} to just {{sender_email}} so we can handle it uniformly
-      body = body.replace(/mailto:{{\s*sender_email\s*}}/gi, '{{sender_email}}');
-
       body = body.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();
         if (key === 'unsubscribe_link') {
           return `mailto:${replyToAddress}?subject=Baja%20de%20comunicaciones&body=Por%20favor,%20dame%20de%20baja%20de%20esta%20lista%20de%20correo.%20Mi%20email%20es:%20${targetEmail}`;
         }
         if (key === 'sender_email') {
-          return `mailto:${replyToAddress}`;
+          return replyToAddress;
         }
         const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
         return matchingKey ? (recipient[matchingKey] || '') : '';
+      });
+
+      // Fix hrefs that contain the email address to ensure they are valid mailto: links
+      body = body.replace(/href=["']([^"']+)["']/gi, (match, url) => {
+        const cleanUrl = url.trim();
+        if (cleanUrl === replyToAddress || cleanUrl.toLowerCase().replace(/\s+/g, '') === `mailto:${replyToAddress.toLowerCase()}`) {
+          return `href="mailto:${replyToAddress}"`;
+        }
+        return match;
       });
       subject = subject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();
