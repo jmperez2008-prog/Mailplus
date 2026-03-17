@@ -71,7 +71,7 @@ export async function generateDraftTemplate(goal: string) {
     El estilo debe ser corporativo de Orange (somos distribuidores oficiales).
     Usa SOLO las variables entre llaves dobles que se te hayan indicado en el objetivo (por ejemplo {{Nombre}}, {{Empresa}}). NO inventes variables nuevas como {{cargo}} o {{puesto}} si no se te han pedido.
     Incluye una estructura HTML limpia con acentos en color naranja (#FF7900).
-    Si incluyes un botón o enlace para responder, su href debe ser exactamente "mailto:{{sender_email}}".
+    Si incluyes un botón o enlace para responder, su href debe ser exactamente "{{sender_email}}".
     Devuelve un JSON con "subject" y "body" (HTML básico).
   `;
 
