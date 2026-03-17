@@ -391,7 +391,7 @@ export default function App() {
     if (signature || signatureImage) {
       body += `<br><br><div class="signature">`;
       if (signature) body += `${signature}`;
-      if (signatureImage) body += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; margin-top: 10px;">`;
+      if (signatureImage) body += `<br><img src="${signatureImage}" alt="Firma" style="width: 100%; max-width: 100%; height: auto; margin-top: 10px; display: block;">`;
       body += `</div>`;
     }
 

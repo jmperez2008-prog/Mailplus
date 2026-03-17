@@ -478,9 +478,9 @@ export async function createApp() {
                 cid: 'signature_image_cid'
               });
               
-              contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px; display: block;">`;
+              contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" style="width: 100%; max-width: 100%; height: auto; margin-top: 10px; display: block;">`;
             } else if (signatureImage) {
-              contentBody += `<br><img src="${signatureImage}" alt="Firma" style="max-width: 500px; height: auto; margin-top: 10px; display: block;">`;
+              contentBody += `<br><img src="${signatureImage}" alt="Firma" style="width: 100%; max-width: 100%; height: auto; margin-top: 10px; display: block;">`;
             }
             contentBody += `</div>`;
           }
