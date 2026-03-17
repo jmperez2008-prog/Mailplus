@@ -115,13 +115,17 @@ export default function App() {
 
     setIsSavingTemplate(true);
     try {
+      // Encode aiExplanation to safely store it in an HTML comment
+      const encodedExplanation = btoa(encodeURIComponent(aiExplanation || ''));
+      const bodyToSave = `<!-- ai_explanation: ${encodedExplanation} -->\n${template.body}`;
+
       const res = await fetch('/api/templates', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name, subject: template.subject, body: template.body })
+        body: JSON.stringify({ name, subject: template.subject, body: bodyToSave })
       });
       if (res.ok) {
         alert("Plantilla guardada");
@@ -135,7 +139,24 @@ export default function App() {
   };
 
   const handleLoadTemplate = (t: any) => {
-    setTemplate({ subject: t.subject, body: t.body });
+    let loadedBody = t.body;
+    let loadedExplanation = '';
+
+    // Extract ai_explanation if it exists
+    const match = loadedBody.match(/<!-- ai_explanation: (.*?) -->\n?/);
+    if (match) {
+      try {
+        loadedExplanation = decodeURIComponent(atob(match[1]));
+        loadedBody = loadedBody.replace(match[0], '');
+      } catch (e) {
+        console.error("Error decoding ai_explanation", e);
+      }
+    }
+
+    setTemplate({ subject: t.subject, body: loadedBody });
+    if (loadedExplanation) {
+      setAiExplanation(loadedExplanation);
+    }
     alert(`Plantilla "${t.name}" cargada`);
   };
 
@@ -660,18 +681,37 @@ export default function App() {
                       onClick={() => {
                         setManualRecipients([{ Nombre: '', Email: '', Empresa: '' }]);
                         setAiExplanation('');
+                        setTemplate({ subject: '', body: '' });
                       }}
                       className="px-6 py-3 text-slate-500 font-medium hover:text-slate-700 transition-all"
                     >
                       Limpiar
                     </button>
+                    {template.subject && template.body && (
+                      <button 
+                        onClick={() => {
+                          const validRecipients = manualRecipients.filter(r => r.Email);
+                          if (validRecipients.length === 0) {
+                            alert("Por favor, introduce al menos un email.");
+                            return;
+                          }
+                          setRecipients(validRecipients);
+                          setPersonalizedPreviews({});
+                          setStep(3);
+                        }}
+                        className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:bg-slate-800 transition-all"
+                      >
+                        Usar Plantilla Cargada
+                        <ChevronRight size={20} />
+                      </button>
+                    )}
                     <button 
                       onClick={handleGenerateIndividualEmail}
                       disabled={isGenerating}
                       className="flex items-center gap-2 px-8 py-3 bg-[#FF7900] text-white rounded-xl font-bold shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all"
                     >
                       {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
-                      Generar Correos Personalizados
+                      Generar Nueva Plantilla
                     </button>
                   </div>
                 </div>
