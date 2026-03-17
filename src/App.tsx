@@ -110,8 +110,14 @@ export default function App() {
   };
 
   const handleSaveTemplate = async () => {
+    console.log("Template to save:", template);
     const name = prompt("Nombre para esta plantilla:");
     if (!name) return;
+
+    if (!template.subject || !template.body) {
+      alert("No hay plantilla generada para guardar.");
+      return;
+    }
 
     setIsSavingTemplate(true);
     try {
@@ -130,9 +136,14 @@ export default function App() {
       if (res.ok) {
         alert("Plantilla guardada");
         fetchSavedTemplates();
+      } else {
+        const errorData = await res.json();
+        console.error("Error saving template:", errorData);
+        alert("Error al guardar la plantilla: " + (errorData.error || "Error desconocido"));
       }
     } catch (e) {
       console.error(e);
+      alert("Error al guardar la plantilla");
     } finally {
       setIsSavingTemplate(false);
     }

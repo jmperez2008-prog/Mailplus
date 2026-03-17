@@ -494,6 +494,9 @@ export async function createApp() {
             <p>Este correo se ha enviado a ${targetEmail}. Si no deseas recibir más correos, puedes <a href="{{unsubscribe_link}}">darte de baja aquí</a>.</p>
           </div>`;
 
+          // Ensure the sender_email link has the subject line
+          contentBody = contentBody.replace(/href=["']\{\{\s*sender_email\s*\}\}["']/gi, 'href="mailto:{{sender_email}}?subject=Estoy%20interesado%20en%20Orange!!!"');
+
           contentBody = contentBody.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
             const key = p1.trim().toLowerCase();
             if (key === 'unsubscribe_link') {
@@ -509,8 +512,9 @@ export async function createApp() {
           // Fix hrefs that contain the email address to ensure they are valid mailto: links
           contentBody = contentBody.replace(/href=["']([^"']+)["']/gi, (match, url) => {
             const cleanUrl = url.trim();
-            if (cleanUrl === replyToAddress || cleanUrl.toLowerCase().replace(/\s+/g, '') === `mailto:${replyToAddress.toLowerCase()}`) {
-              return `href="mailto:${replyToAddress}?subject=Estoy%20interesado%20en%20Orange!!!"`;
+            const cleanReplyTo = replyToAddress.trim();
+            if (cleanUrl === cleanReplyTo || cleanUrl.toLowerCase().replace(/\s+/g, '') === `mailto:${cleanReplyTo.toLowerCase()}`) {
+              return `href="mailto:${cleanReplyTo}?subject=Estoy%20interesado%20en%20Orange!!!"`;
             }
             return match;
           });
