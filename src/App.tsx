@@ -417,6 +417,9 @@ export default function App() {
     }
 
     body += `<br><br><div style="text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+      <p>
+        <a href="{{sender_email}}" style="background-color: #FF7900; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Responder</a>
+      </p>
       <p>Este correo se ha enviado a {{Email}}. Si no deseas recibir más correos, puedes <a href="{{unsubscribe_link}}">darte de baja aquí</a>.</p>
     </div>`;
 
