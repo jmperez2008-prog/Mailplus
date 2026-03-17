@@ -510,7 +510,7 @@ export async function createApp() {
           contentBody = contentBody.replace(/href=["']([^"']+)["']/gi, (match, url) => {
             const cleanUrl = url.trim();
             if (cleanUrl === replyToAddress || cleanUrl.toLowerCase().replace(/\s+/g, '') === `mailto:${replyToAddress.toLowerCase()}`) {
-              return `href="mailto:${replyToAddress}"`;
+              return `href="mailto:${replyToAddress}?subject=Estoy%20interesado%20en%20Orange!!!"`;
             }
             return match;
           });
