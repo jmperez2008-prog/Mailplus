@@ -277,7 +277,7 @@ export default function App() {
     if (!goal) return;
 
     setIsGenerating(true);
-    const result = await generateDraftTemplate(`${goal}. El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. Incluye un placeholder para el logotipo. Si incluyes un botón o enlace para responder, su href debe ser exactamente "{{sender_email}}".`);
+    const result = await generateDraftTemplate(`${goal}. El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. Incluye un placeholder para el logotipo. Incluye obligatoriamente un botón o enlace para responder con el texto "Responder" y su href debe ser exactamente "{{sender_email}}".`);
     if (result) {
       setTemplate(result);
       setPersonalizedPreviews({});
@@ -300,7 +300,7 @@ export default function App() {
       ? `Usa estrictamente estas variables entre llaves dobles para personalizar el contenido: ${availableFields.map(f => `{{${f}}}`).join(', ')}. NO inventes variables que no estén en esta lista (como {{cargo}}, {{puesto}}, etc).` 
       : 'NO uses variables entre llaves dobles para personalizar el contenido, ya que no hay datos disponibles.';
 
-    const goal = `Genera un correo profesional de Orange basado en esta petición: ${aiExplanation}. ${fieldsText} El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. No uses nombres reales, usa las variables entre llaves dobles. Si incluyes un botón o enlace para responder, su href debe ser exactamente "{{sender_email}}".`;
+    const goal = `Genera un correo profesional de Orange basado en esta petición: ${aiExplanation}. ${fieldsText} El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. No uses nombres reales, usa las variables entre llaves dobles. Incluye obligatoriamente un botón o enlace para responder con el texto "Responder" y su href debe ser exactamente "{{sender_email}}".`;
     
     const result = await generateDraftTemplate(goal);
     
