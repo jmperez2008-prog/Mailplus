@@ -277,7 +277,7 @@ export default function App() {
     if (!goal) return;
 
     setIsGenerating(true);
-    const result = await generateDraftTemplate(`${goal}. El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. Incluye un placeholder para el logotipo.`);
+    const result = await generateDraftTemplate(`${goal}. El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. Incluye un placeholder para el logotipo. Si incluyes un botón o enlace para responder, su href debe ser exactamente "mailto:{{sender_email}}".`);
     if (result) {
       setTemplate(result);
       setPersonalizedPreviews({});
@@ -300,7 +300,7 @@ export default function App() {
       ? `Usa estrictamente estas variables entre llaves dobles para personalizar el contenido: ${availableFields.map(f => `{{${f}}}`).join(', ')}. NO inventes variables que no estén en esta lista (como {{cargo}}, {{puesto}}, etc).` 
       : 'NO uses variables entre llaves dobles para personalizar el contenido, ya que no hay datos disponibles.';
 
-    const goal = `Genera un correo profesional de Orange basado en esta petición: ${aiExplanation}. ${fieldsText} El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. No uses nombres reales, usa las variables entre llaves dobles.`;
+    const goal = `Genera un correo profesional de Orange basado en esta petición: ${aiExplanation}. ${fieldsText} El estilo debe ser corporativo de Orange (distribuidor oficial), usando colores naranja (#FF7900) y negro. No uses nombres reales, usa las variables entre llaves dobles. Si incluyes un botón o enlace para responder, su href debe ser exactamente "mailto:{{sender_email}}".`;
     
     const result = await generateDraftTemplate(goal);
     
@@ -423,22 +423,39 @@ export default function App() {
     // Always run placeholder replacement on the body (including footer)
     const recipient = recipients[activePreviewIndex];
     if (recipient) {
+      const targetEmail = recipient.email || recipient.Email || recipient.Correo || recipient.correo || recipient.CORREO || 'destinatario@ejemplo.com';
+      let replyToAddress = smtpConfig.user;
+      if (smtpConfig.from) {
+        if (smtpConfig.from.includes('<')) {
+          const match = smtpConfig.from.match(/<([^>]+)>/);
+          if (match) replyToAddress = match[1];
+        } else if (smtpConfig.from.includes('@')) {
+          replyToAddress = smtpConfig.from;
+        }
+      }
+
       body = body.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();
-        if (key === 'unsubscribe_link') return match;
+        if (key === 'unsubscribe_link') {
+          return `mailto:${replyToAddress}?subject=Baja%20de%20comunicaciones&body=Por%20favor,%20dame%20de%20baja%20de%20esta%20lista%20de%20correo.%20Mi%20email%20es:%20${targetEmail}`;
+        }
+        if (key === 'sender_email') {
+          return replyToAddress;
+        }
         const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
         return matchingKey ? (recipient[matchingKey] || '') : '';
       });
       subject = subject.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
         const key = p1.trim().toLowerCase();
-        if (key === 'unsubscribe_link') return match;
+        if (key === 'unsubscribe_link') return '';
+        if (key === 'sender_email') return replyToAddress;
         const matchingKey = Object.keys(recipient).find(k => k.trim().toLowerCase() === key);
         return matchingKey ? (recipient[matchingKey] || '') : '';
       });
     }
 
     return { ...base, body, subject };
-  }, [activePreviewIndex, personalizedPreviews, template, logo, signature, signatureImage, recipients]);
+  }, [activePreviewIndex, personalizedPreviews, template, logo, signature, signatureImage, recipients, smtpConfig]);
 
   if (!user) {
     return <Login onLogin={handleLogin} />;
