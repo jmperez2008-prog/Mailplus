@@ -444,8 +444,8 @@ export async function createApp() {
         }
 
         try {
-          let personalizedBody = template.body;
           let personalizedSubject = template.subject;
+          let contentBody = '';
 
           // Use AI personalized preview if available for this recipient
           if (personalizedPreviews && personalizedPreviews[i]) {
