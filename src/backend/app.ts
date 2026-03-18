@@ -307,6 +307,21 @@ export async function createApp() {
   });
 
   // Save new template
+  app.get("/api/email-history", authenticateToken, async (req: any, res) => {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('email_history')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) return res.status(500).json({ error: error.message });
+      res.json(data);
+    } else {
+      res.status(501).json({ error: "No disponible en modo local" });
+    }
+  });
+
   app.post("/api/templates", authenticateToken, async (req: any, res) => {
     const { name, subject, body } = req.body;
     if (!name) return res.status(400).json({ error: "El nombre es obligatorio" });
@@ -565,12 +580,30 @@ export async function createApp() {
             messageId: info.messageId,
             response: info.response 
           });
+          if (supabase) {
+            await supabase.from('email_history').insert([{
+              user_id: user.id,
+              recipient_email: targetEmail,
+              recipient_data: recipient,
+              status: "sent",
+              error: null
+            }]);
+          }
         } catch (error: any) {
           results.push({ 
             email: targetEmail, 
             status: "failed", 
             error: error.message || "Error desconocido" 
           });
+          if (supabase) {
+            await supabase.from('email_history').insert([{
+              user_id: user.id,
+              recipient_email: targetEmail,
+              recipient_data: recipient,
+              status: "failed",
+              error: error.message || "Error desconocido"
+            }]);
+          }
         }
       }
 

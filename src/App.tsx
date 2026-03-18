@@ -17,7 +17,8 @@ import {
   EyeOff,
   Layout,
   LogOut,
-  Shield
+  Shield,
+  History
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useDropzone } from 'react-dropzone';
@@ -53,6 +54,7 @@ export default function App() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [template, setTemplate] = useState<EmailTemplate>({ subject: '', body: '' });
   const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
+  const [emailHistory, setEmailHistory] = useState<any[]>([]);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   
@@ -92,6 +94,7 @@ export default function App() {
     }
     if (token) {
       fetchSavedTemplates();
+      fetchEmailHistory();
     }
   }, [user, token]);
 
@@ -106,6 +109,20 @@ export default function App() {
       }
     } catch (e) {
       console.error("Error fetching templates", e);
+    }
+  };
+
+  const fetchEmailHistory = async () => {
+    try {
+      const res = await fetch('/api/email-history', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmailHistory(data);
+      }
+    } catch (e) {
+      console.error("Error fetching email history", e);
     }
   };
 
@@ -501,6 +518,7 @@ export default function App() {
             { id: 3, label: 'Previsualizar', icon: Eye },
             { id: 4, label: 'Configuración', icon: Settings },
             { id: 5, label: 'Estado de Envío', icon: Send },
+            { id: 7, label: 'Historial de envíos', icon: History },
           ].map((item) => (
             <button
               key={item.id}
@@ -1213,6 +1231,43 @@ export default function App() {
               >
                 Nueva Campaña
               </button>
+            </motion.div>
+          )}
+
+          {step === 7 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <h2 className="text-2xl font-bold">Historial de envíos</h2>
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left">
+                      <th className="pb-3">Fecha</th>
+                      <th className="pb-3">Email</th>
+                      <th className="pb-3">Estado</th>
+                      <th className="pb-3">Detalles</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {emailHistory.map((item, i) => (
+                      <tr key={i} className="border-b border-slate-100 last:border-0">
+                        <td className="py-3">{new Date(item.created_at).toLocaleString()}</td>
+                        <td className="py-3">{item.recipient_email}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="py-3 text-slate-500">{item.error || 'Enviado correctamente'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </motion.div>
           )}
 
