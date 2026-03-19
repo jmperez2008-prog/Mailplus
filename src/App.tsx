@@ -219,7 +219,7 @@ export default function App() {
     setSignatureImage(null);
   };
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (silent = false, newLogo?: string | null, newSignatureImage?: string | null) => {
     if (!user || !token) return;
     setIsSavingSettings(true);
     try {
@@ -229,19 +229,24 @@ export default function App() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ smtpConfig, signature, signatureImage, logo })
+        body: JSON.stringify({ 
+          smtpConfig, 
+          signature, 
+          signatureImage: newSignatureImage !== undefined ? newSignatureImage : signatureImage, 
+          logo: newLogo !== undefined ? newLogo : logo 
+        })
       });
       
       if (res.ok) {
         const updatedUser = await res.json();
         setUser(updatedUser);
-        alert('Configuración guardada correctamente');
+        if (!silent) alert('Configuración guardada correctamente');
       } else {
-        alert('Error al guardar la configuración');
+        if (!silent) alert('Error al guardar la configuración');
       }
     } catch (e) {
       console.error(e);
-      alert('Error de conexión');
+      if (!silent) alert('Error de conexión');
     } finally {
       setIsSavingSettings(false);
     }
@@ -365,7 +370,9 @@ export default function App() {
       }
       const reader = new FileReader();
       reader.onload = (event) => {
-        setLogo(event.target?.result as string);
+        const newLogo = event.target?.result as string;
+        setLogo(newLogo);
+        handleSaveSettings(true, newLogo, signatureImage);
       };
       reader.readAsDataURL(file);
     }
@@ -429,7 +436,9 @@ export default function App() {
       }
       const reader = new FileReader();
       reader.onload = (event) => {
-        setSignatureImage(event.target?.result as string);
+        const newSignatureImage = event.target?.result as string;
+        setSignatureImage(newSignatureImage);
+        handleSaveSettings(true, logo, newSignatureImage);
       };
       reader.readAsDataURL(file);
     }
@@ -889,7 +898,10 @@ export default function App() {
                         <div className="relative group w-full aspect-video bg-slate-50 rounded-xl overflow-hidden border border-slate-100 flex items-center justify-center">
                           <img src={logo} alt="Logo preview" className="max-h-full object-contain p-2" />
                           <button 
-                            onClick={() => setLogo(null)}
+                            onClick={() => {
+                              setLogo(null);
+                              handleSaveSettings(true, null, signatureImage);
+                            }}
                             className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <Trash2 size={14} />
@@ -1130,7 +1142,10 @@ export default function App() {
                         <div className="relative group w-full aspect-video bg-slate-50 rounded-xl overflow-hidden border border-slate-100 flex items-center justify-center">
                           <img src={signatureImage} alt="Signature preview" className="max-h-full object-contain p-2" />
                           <button 
-                            onClick={() => setSignatureImage(null)}
+                            onClick={() => {
+                              setSignatureImage(null);
+                              handleSaveSettings(true, logo, null);
+                            }}
                             className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <Trash2 size={14} />
@@ -1158,7 +1173,7 @@ export default function App() {
                     Probar Conexión
                   </button>
                   <button 
-                    onClick={handleSaveSettings}
+                    onClick={() => handleSaveSettings(false)}
                     disabled={isSavingSettings}
                     className="px-8 py-3 bg-[#FF7900] text-white rounded-xl font-bold shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all flex items-center gap-2"
                   >

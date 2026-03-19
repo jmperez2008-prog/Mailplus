@@ -230,8 +230,14 @@ export async function createApp() {
     const newSmtpConfig = { ...currentSmtpConfig, ...(smtpConfig || {}) };
 
     if (signature !== undefined) updates.signature = signature;
-    if (signatureImage !== undefined) newSmtpConfig.signature_image = signatureImage;
-    if (logo !== undefined) newSmtpConfig.logo = logo;
+    if (signatureImage !== undefined) {
+      newSmtpConfig.signature_image = signatureImage;
+      if ('signature_image' in user) updates.signature_image = signatureImage;
+    }
+    if (logo !== undefined) {
+      newSmtpConfig.logo = logo;
+      if ('logo' in user) updates.logo = logo;
+    }
     
     updates.smtp_config = newSmtpConfig;
 
