@@ -359,6 +359,10 @@ export default function App() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.type === 'image/svg+xml') {
+        alert('Por favor, sube una imagen en formato PNG o JPG. Outlook no soporta imágenes SVG.');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         setLogo(event.target?.result as string);
@@ -419,6 +423,10 @@ export default function App() {
   const handleSignatureImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.type === 'image/svg+xml') {
+        alert('Por favor, sube una imagen en formato PNG o JPG. Outlook no soporta imágenes SVG.');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         setSignatureImage(event.target?.result as string);

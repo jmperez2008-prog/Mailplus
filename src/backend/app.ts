@@ -497,9 +497,9 @@ export async function createApp() {
                 cid: 'logo_image_cid'
               });
               
-              fullHtmlLogo = `<div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo_image_cid" alt="Logo" width="200" style="max-width: 200px; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;"></div>`;
+              fullHtmlLogo = `<div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo_image_cid" alt="Logo" width="200" style="border: 0; outline: none; text-decoration: none;"></div>`;
             } else {
-              fullHtmlLogo = `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" width="200" style="max-width: 200px; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;"></div>`;
+              fullHtmlLogo = `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" width="200" style="border: 0; outline: none; text-decoration: none;"></div>`;
             }
           }
           
@@ -521,9 +521,9 @@ export async function createApp() {
                 cid: 'signature_image_cid'
               });
               
-              contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" width="400" style="max-width: 100%; height: auto; margin-top: 10px; display: block; border: 0; outline: none; text-decoration: none;">`;
+              contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" width="400" style="display: block; border: 0; outline: none; text-decoration: none; margin-top: 10px;">`;
             } else if (signatureImage) {
-              contentBody += `<br><img src="${signatureImage}" alt="Firma" width="400" style="max-width: 100%; height: auto; margin-top: 10px; display: block; border: 0; outline: none; text-decoration: none;">`;
+              contentBody += `<br><img src="${signatureImage}" alt="Firma" width="400" style="display: block; border: 0; outline: none; text-decoration: none; margin-top: 10px;">`;
             }
             contentBody += `</div>`;
           }
