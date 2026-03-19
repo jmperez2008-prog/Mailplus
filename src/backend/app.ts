@@ -473,12 +473,12 @@ export async function createApp() {
             personalizedSubject = template.subject;
           }
 
-          const fullHtmlLogo = logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" style="max-width: 200px;"></div>` : '';
+          const fullHtmlLogo = logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" width="200" style="max-width: 200px; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;"></div>` : '';
           
           const attachments: any[] = [];
           
           if (signature || signatureImage) {
-            contentBody += `<br><br><div class="signature" style="border-top: 1px solid #eee; pt-4; mt-4;">`;
+            contentBody += `<br><br><div class="signature" style="border-top: 1px solid #eee; padding-top: 16px; margin-top: 16px;">`;
             if (signature) {
               contentBody += `<div style="color: #666; font-size: 14px;">${signature}</div>`;
             }
@@ -495,16 +495,16 @@ export async function createApp() {
                 cid: 'signature_image_cid'
               });
               
-              contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" style="width: 100%; max-width: 100%; height: auto; margin-top: 10px; display: block;">`;
+              contentBody += `<br><img src="cid:signature_image_cid" alt="Firma" width="400" style="max-width: 100%; height: auto; margin-top: 10px; display: block; border: 0; outline: none; text-decoration: none;">`;
             } else if (signatureImage) {
-              contentBody += `<br><img src="${signatureImage}" alt="Firma" style="width: 100%; max-width: 100%; height: auto; margin-top: 10px; display: block;">`;
+              contentBody += `<br><img src="${signatureImage}" alt="Firma" width="400" style="max-width: 100%; height: auto; margin-top: 10px; display: block; border: 0; outline: none; text-decoration: none;">`;
             }
             contentBody += `</div>`;
           }
 
           contentBody += `<br><br><div style="text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
             <p>
-              <a href="{{sender_email}}" style="background-color: #FF7900; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Responder</a>
+              <a href="{{sender_email}}" style="background-color: #FF7900; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; mso-padding-alt: 0; text-underline-color: #FF7900;"><!--[if mso]><i style="letter-spacing: 20px; mso-font-width: -100%; mso-text-raise: 20pt;">&nbsp;</i><![endif]--><span style="mso-text-raise: 10pt;">Responder</span><!--[if mso]><i style="letter-spacing: 20px; mso-font-width: -100%;">&nbsp;</i><![endif]--></a>
             </p>
             <p>Este correo se ha enviado a ${targetEmail}. Si no deseas recibir más correos, puedes <a href="{{unsubscribe_link}}">darte de baja aquí</a>.</p>
           </div>`;
@@ -542,17 +542,37 @@ export async function createApp() {
 
           const fullHtml = `
             <!DOCTYPE html>
-            <html lang="es">
+            <html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
               <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta http-equiv="X-UA-Compatible" content="IE=edge">
                 <title>${personalizedSubject}</title>
+                <!--[if mso]>
+                <style type="text/css">
+                  body, table, td, p, a, li, blockquote {font-family: Arial, sans-serif !important;}
+                </style>
+                <![endif]-->
               </head>
-              <body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #ffffff;">
-                <div style="max-width: 600px; margin: 0 auto;">
-                  ${fullHtmlLogo}
-                  ${contentBody}
-                </div>
+              <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #ffffff; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+                <center style="width: 100%; background-color: #ffffff;">
+                  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <!--[if mso]>
+                    <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600">
+                    <tr>
+                    <td style="padding: 20px;">
+                    <![endif]-->
+                    
+                    ${fullHtmlLogo}
+                    ${contentBody}
+                    
+                    <!--[if mso]>
+                    </td>
+                    </tr>
+                    </table>
+                    <![endif]-->
+                  </div>
+                </center>
               </body>
             </html>
           `.trim();
