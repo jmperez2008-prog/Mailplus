@@ -293,10 +293,17 @@ export async function createApp() {
   // Get all templates for user
   app.get("/api/templates", authenticateToken, async (req: any, res) => {
     if (supabase) {
+      // Find all admin users
+      const { data: adminUsers } = await supabase.from('app_users').select('id').eq('role', 'admin');
+      const adminIds = adminUsers?.map(u => u.id) || [];
+      
+      // Include current user's ID and admin IDs
+      const allowedIds = [...new Set([...adminIds, req.user.id])];
+
       const { data, error } = await supabase
         .from('email_templates')
         .select('*')
-        .eq('user_id', req.user.id)
+        .in('user_id', allowedIds)
         .order('created_at', { ascending: false });
       
       if (error) return res.status(500).json({ error: error.message });
@@ -473,9 +480,28 @@ export async function createApp() {
             personalizedSubject = template.subject;
           }
 
-          const fullHtmlLogo = logo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" width="200" style="max-width: 200px; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;"></div>` : '';
-          
           const attachments: any[] = [];
+          let fullHtmlLogo = '';
+
+          if (logo) {
+            if (logo.startsWith('data:image/')) {
+              const [meta, data] = logo.split(',');
+              const mimeMatch = meta.match(/:(.*?);/);
+              const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+              const extension = mimeType.split('/')[1] || 'png';
+              
+              attachments.push({
+                filename: `logo.${extension}`,
+                content: data,
+                encoding: 'base64',
+                cid: 'logo_image_cid'
+              });
+              
+              fullHtmlLogo = `<div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo_image_cid" alt="Logo" width="200" style="max-width: 200px; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;"></div>`;
+            } else {
+              fullHtmlLogo = `<div style="text-align: center; margin-bottom: 20px;"><img src="${logo}" alt="Logo" width="200" style="max-width: 200px; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;"></div>`;
+            }
+          }
           
           if (signature || signatureImage) {
             contentBody += `<br><br><div class="signature" style="border-top: 1px solid #eee; padding-top: 16px; margin-top: 16px;">`;

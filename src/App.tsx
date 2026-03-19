@@ -834,13 +834,19 @@ export default function App() {
                               onClick={() => handleLoadTemplate(t)}
                               className="p-3 hover:bg-orange-50 rounded-xl cursor-pointer flex justify-between items-center group/item"
                             >
-                              <span className="text-sm font-medium truncate pr-2">{t.name}</span>
-                              <button 
-                                onClick={(e) => handleDeleteTemplate(t.id, e)}
-                                className="text-slate-300 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <span className="text-sm font-medium truncate pr-2">
+                                {t.name}
+                                {t.user_id !== user?.id && <span className="ml-2 text-xs text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded-md">Admin</span>}
+                              </span>
+                              {t.user_id === user?.id && (
+                                <button 
+                                  onClick={(e) => handleDeleteTemplate(t.id, e)}
+                                  className="text-slate-300 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                  title="Eliminar plantilla"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
