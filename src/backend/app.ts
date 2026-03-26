@@ -369,6 +369,48 @@ export async function createApp() {
     }
   });
 
+  // Transfer reports
+  app.post("/api/transfer-reports", authenticateToken, async (req: any, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: "Solo administradores" });
+
+    const { sourceUserId, targetUserId, reportIds } = req.body;
+    if (!sourceUserId || !targetUserId) return res.status(400).json({ error: "Faltan IDs de usuario" });
+
+    if (supabase) {
+      let query = supabase
+        .from('email_history')
+        .select('id, recipient_data')
+        .eq('user_id', sourceUserId);
+      
+      if (reportIds && reportIds.length > 0) {
+        query = query.in('id', reportIds);
+      }
+
+      const { data: reports, error: fetchError } = await query;
+      if (fetchError) return res.status(500).json({ error: fetchError.message });
+      if (!reports || reports.length === 0) return res.json({ message: "No hay reportes para transferir" });
+
+      for (const report of reports) {
+        const recipientData = report.recipient_data || {};
+        recipientData.previous_owner_id = sourceUserId;
+        
+        const { error: updateError } = await supabase
+          .from('email_history')
+          .update({ 
+            user_id: targetUserId,
+            recipient_data: recipientData
+          })
+          .eq('id', report.id);
+        
+        if (updateError) return res.status(500).json({ error: updateError.message });
+      }
+
+      res.json({ message: `Transferidos ${reports.length} reportes` });
+    } else {
+      res.sendStatus(501);
+    }
+  });
+
   // --- Email Routes ---
 
   // Test SMTP connection

@@ -11,10 +11,47 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferSourceUserId, setTransferSourceUserId] = useState<string | null>(null);
+  const [transferTargetUserId, setTransferTargetUserId] = useState<string>('');
+  const [transferring, setTransferring] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', password: '', role: 'user' });
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+
+  const handleTransferReports = (sourceUserId: string) => {
+    setTransferSourceUserId(sourceUserId);
+    setShowTransferModal(true);
+  };
+
+  const executeTransfer = async () => {
+    if (!transferSourceUserId || !transferTargetUserId) return;
+    setTransferring(true);
+    try {
+      const res = await fetch('/api/transfer-reports', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ sourceUserId: transferSourceUserId, targetUserId: transferTargetUserId })
+      });
+      if (res.ok) {
+        setShowTransferModal(false);
+        setTransferSourceUserId(null);
+        setTransferTargetUserId('');
+        fetchUsers();
+      } else {
+        alert('Error al transferir reportes');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de conexión');
+    } finally {
+      setTransferring(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -137,7 +174,14 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
                       {user.sent_emails_count || 0}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                    <button 
+                      onClick={() => handleTransferReports(user.id)}
+                      className="text-slate-400 hover:text-indigo-500 transition-colors p-2 hover:bg-indigo-50 rounded-lg"
+                      title="Transferir reportes"
+                    >
+                      <UserPlus size={16} />
+                    </button>
                     <button 
                       onClick={() => handleDeleteUser(user.id)}
                       className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
@@ -219,6 +263,42 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
                 {creating ? <Loader2 className="animate-spin" size={20} /> : 'Crear Usuario'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">Transferir Reportes</h3>
+              <button onClick={() => setShowTransferModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Comercial Destino</label>
+                <select 
+                  value={transferTargetUserId}
+                  onChange={e => setTransferTargetUserId(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="">Selecciona un comercial</option>
+                  {users.filter(u => u.id !== transferSourceUserId).map(u => (
+                    <option key={u.id} value={u.id}>{u.username}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button 
+                onClick={executeTransfer}
+                disabled={transferring || !transferTargetUserId}
+                className="w-full py-3 bg-[#FF7900] text-white rounded-xl font-bold shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-4"
+              >
+                {transferring ? <Loader2 className="animate-spin" size={20} /> : 'Transferir Reportes'}
+              </button>
+            </div>
           </div>
         </div>
       )}
