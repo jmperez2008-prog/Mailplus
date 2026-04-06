@@ -11,6 +11,9 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editUserForm, setEditUserForm] = useState({ username: '', password: '', role: 'user' });
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferSourceUserId, setTransferSourceUserId] = useState<string | null>(null);
   const [transferTargetUserId, setTransferTargetUserId] = useState<string>('');
@@ -19,6 +22,42 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setEditUserForm({ username: user.username, password: '', role: user.role });
+    setShowEditModal(true);
+  };
+
+  const executeEditUser = async () => {
+    if (!editingUser) return;
+    setCreating(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(editUserForm)
+      });
+
+      if (res.ok) {
+        setShowEditModal(false);
+        setEditingUser(null);
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Error al editar usuario');
+      }
+    } catch (e) {
+      setError('Error de conexión');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const handleTransferReports = (sourceUserId: string) => {
     setTransferSourceUserId(sourceUserId);
@@ -176,6 +215,13 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
                   </td>
                   <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                     <button 
+                      onClick={() => handleEditUser(user)}
+                      className="text-slate-400 hover:text-orange-500 transition-colors p-2 hover:bg-orange-50 rounded-lg"
+                      title="Editar usuario"
+                    >
+                      <UserIcon size={16} />
+                    </button>
+                    <button 
                       onClick={() => handleTransferReports(user.id)}
                       className="text-slate-400 hover:text-indigo-500 transition-colors p-2 hover:bg-indigo-50 rounded-lg"
                       title="Transferir reportes"
@@ -266,6 +312,65 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
           </div>
         </div>
       )}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">Editar Usuario</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={24} />
+              </button>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-6 text-center font-medium">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nombre de Usuario</label>
+                <input 
+                  type="text" 
+                  value={editUserForm.username}
+                  onChange={e => setEditUserForm({...editUserForm, username: e.target.value})}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nueva Contraseña (dejar vacío para no cambiar)</label>
+                <input 
+                  type="password" 
+                  value={editUserForm.password}
+                  onChange={e => setEditUserForm({...editUserForm, password: e.target.value})}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Rol</label>
+                <select 
+                  value={editUserForm.role}
+                  onChange={e => setEditUserForm({...editUserForm, role: e.target.value})}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="user">Usuario Estándar</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+
+              <button 
+                onClick={executeEditUser}
+                disabled={creating}
+                className="w-full py-3 bg-[#FF7900] text-white rounded-xl font-bold shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-4"
+              >
+                {creating ? <Loader2 className="animate-spin" size={20} /> : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTransferModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">

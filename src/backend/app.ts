@@ -223,11 +223,16 @@ export async function createApp() {
     const user = await findUserById(userId);
     if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
-    const { smtpConfig, signature, signatureImage, password, logo } = req.body;
+    const { smtpConfig, signature, signatureImage, password, logo, username, role } = req.body;
     
     const updates: any = {};
     const currentSmtpConfig = user.smtp_config || {};
     const newSmtpConfig = { ...currentSmtpConfig, ...(smtpConfig || {}) };
+
+    if (req.user.role === 'admin') {
+      if (username !== undefined) updates.username = username;
+      if (role !== undefined) updates.role = role;
+    }
 
     if (signature !== undefined) updates.signature = signature;
     if (signatureImage !== undefined) {
