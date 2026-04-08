@@ -635,11 +635,11 @@ export async function createApp() {
               </head>
               <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #ffffff; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
                 <center style="width: 100%; background-color: #ffffff;">
-                  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="max-width: 600px; margin: 0 auto; padding: 20px; text-align: left;">
                     <!--[if mso]>
                     <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600">
                     <tr>
-                    <td style="padding: 20px;">
+                    <td style="padding: 20px; text-align: left;">
                     <![endif]-->
                     
                     ${fullHtmlLogo}
