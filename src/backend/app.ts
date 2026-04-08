@@ -456,7 +456,30 @@ export async function createApp() {
         to: user, 
         subject: "MailPulse Orange - Prueba de Conexión",
         text: "Si recibes este correo, tu configuración SMTP es correcta y la entrega funciona.",
-        html: "<p>Si recibes este correo, tu configuración SMTP es <strong>correcta</strong> y la entrega funciona.</p>"
+        html: `
+          <!DOCTYPE html>
+          <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #f4f4f5;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f4f5; width: 100%;">
+                <tr>
+                  <td align="center" style="padding: 20px;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; margin: 0 auto;">
+                      <tr>
+                        <td style="padding: 30px; text-align: left; font-family: Arial, sans-serif; font-size: 16px; color: #1a1a1a; background-color: #ffffff;">
+                          <p>Si recibes este correo, tu configuración SMTP es <strong>correcta</strong> y la entrega funciona.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+          </html>
+        `
       });
 
       res.json({ message: "Conexión establecida y correo de prueba enviado a tu bandeja de entrada." });
@@ -633,25 +656,31 @@ export async function createApp() {
                 </style>
                 <![endif]-->
               </head>
-              <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #ffffff; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
-                <center style="width: 100%; background-color: #ffffff;">
-                  <div style="max-width: 600px; margin: 0 auto; padding: 20px; text-align: left;">
-                    <!--[if mso]>
-                    <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600">
-                    <tr>
-                    <td style="padding: 20px; text-align: left;">
-                    <![endif]-->
-                    
-                    ${fullHtmlLogo}
-                    ${contentBody}
-                    
-                    <!--[if mso]>
+              <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #f4f4f5; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f4f5; width: 100%;">
+                  <tr>
+                    <td align="center" style="padding: 20px;">
+                      <!--[if mso]>
+                      <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600">
+                      <tr>
+                      <td style="background-color: #ffffff; padding: 30px;">
+                      <![endif]-->
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; margin: 0 auto;">
+                        <tr>
+                          <td style="padding: 30px; text-align: left; font-family: Arial, sans-serif; font-size: 16px; color: #1a1a1a; background-color: #ffffff;">
+                            ${fullHtmlLogo}
+                            ${contentBody}
+                          </td>
+                        </tr>
+                      </table>
+                      <!--[if mso]>
+                      </td>
+                      </tr>
+                      </table>
+                      <![endif]-->
                     </td>
-                    </tr>
-                    </table>
-                    <![endif]-->
-                  </div>
-                </center>
+                  </tr>
+                </table>
               </body>
             </html>
           `.trim();
