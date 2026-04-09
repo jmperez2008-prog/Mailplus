@@ -18,7 +18,9 @@ import {
   Layout,
   LogOut,
   Shield,
-  History
+  History,
+  Paperclip,
+  X
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useDropzone } from 'react-dropzone';
@@ -77,6 +79,7 @@ export default function App() {
   const [sendResults, setSendResults] = useState<{ email: string; status: string; error?: string; response?: string }[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [personalizedPreviews, setPersonalizedPreviews] = useState<Record<number, EmailTemplate>>({});
+  const [customAttachments, setCustomAttachments] = useState<{name: string, content: string, size: number}[]>([]);
 
   // Load user settings when logged in
   useEffect(() => {
@@ -413,7 +416,8 @@ export default function App() {
           template,
           signatureImage: signatureImage,
           logo: logo,
-          personalizedPreviews: personalizedPreviews
+          personalizedPreviews: personalizedPreviews,
+          customAttachments: customAttachments
         })
       });
       const data = await response.json();
@@ -442,6 +446,36 @@ export default function App() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    let totalSize = customAttachments.reduce((acc, curr) => acc + curr.size, 0);
+    const newAttachments: {name: string, content: string, size: number}[] = [];
+
+    files.forEach(file => {
+      if (totalSize + file.size > 20 * 1024 * 1024) { // 20MB limit
+        alert(`El archivo ${file.name} es demasiado grande. El límite total es de 20MB.`);
+        return;
+      }
+      totalSize += file.size;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setCustomAttachments(prev => [...prev, { name: file.name, content, size: file.size }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset input
+    e.target.value = '';
+  };
+
+  const removeAttachment = (index: number) => {
+    setCustomAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   const currentPreview = useMemo(() => {
@@ -915,6 +949,30 @@ export default function App() {
                         </label>
                       )}
                       <p className="text-[10px] text-slate-400 text-center">Se incluirá automáticamente al principio de cada correo.</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Archivos Adjuntos</label>
+                    <div className="flex flex-col gap-3">
+                      {customAttachments.map((att, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <Paperclip size={16} className="text-slate-400 shrink-0" />
+                            <span className="text-sm font-medium text-slate-700 truncate">{att.name}</span>
+                            <span className="text-xs text-slate-400 shrink-0">({(att.size / 1024 / 1024).toFixed(2)} MB)</span>
+                          </div>
+                          <button onClick={() => removeAttachment(idx)} className="text-slate-400 hover:text-red-500 p-1">
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:bg-slate-50 hover:border-orange-300 hover:text-orange-500 transition-colors cursor-pointer">
+                        <Upload size={18} />
+                        <span className="text-sm font-medium">Añadir archivo</span>
+                        <input type="file" multiple className="hidden" onChange={handleAttachmentUpload} />
+                      </label>
+                      <p className="text-[10px] text-slate-400 text-center">Máximo 20MB en total.</p>
                     </div>
                   </div>
                 </div>

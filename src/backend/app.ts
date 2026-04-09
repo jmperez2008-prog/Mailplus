@@ -491,7 +491,7 @@ export async function createApp() {
 
   // Email sending endpoint
   app.post("/api/send-emails", authenticateToken, async (req: any, res) => {
-    const { recipients, template, signatureImage, logo, personalizedPreviews } = req.body;
+    const { recipients, template, signatureImage, logo, personalizedPreviews, customAttachments = [] } = req.body;
 
     try {
       const user = await findUserById(req.user.id);
@@ -602,6 +602,17 @@ export async function createApp() {
               contentBody += `<br><img src="${signatureImage}" alt="Firma" width="400" style="display: block; border: 0; outline: none; text-decoration: none; margin-top: 10px;">`;
             }
             contentBody += `</div>`;
+          }
+
+          for (const att of customAttachments) {
+            if (att.content && att.content.startsWith('data:')) {
+              const [meta, data] = att.content.split(',');
+              attachments.push({
+                filename: att.name,
+                content: data,
+                encoding: 'base64'
+              });
+            }
           }
 
           contentBody += `<br><br><div style="text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
